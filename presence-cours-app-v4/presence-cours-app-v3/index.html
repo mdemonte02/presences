@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>Présence Cours</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=4" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">IETC · Bac 2</p>
+      <h1>Présence Cours</h1>
+    </div>
+    <button id="themeBtn" class="icon-btn" aria-label="Changer le thème">◐</button>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="muted">Suivi 2026–2027</p>
+        <h2>Garde un œil sur tes 40 % d’absences.</h2>
+        <p class="muted">Les absences justifiées et les cours annulés ne comptent pas dans la limite.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="addAttendanceBtn" class="primary">+ Encoder une séance</button>
+        <button id="scheduleBtn" class="secondary">Horaire</button>
+        <button id="exportBtn" class="secondary">Exporter</button>
+        <label class="secondary file-label">
+          Importer
+          <input id="importInput" type="file" accept="application/json" hidden />
+        </label>
+      </div>
+    </section>
+
+    <section class="summary-grid" id="summaryGrid"></section>
+
+    <section class="section-head">
+      <div>
+        <p class="eyebrow">Matières</p>
+        <h2>Mes cours</h2>
+      </div>
+      <button id="settingsBtn" class="secondary">Modifier les cours</button>
+    </section>
+
+    <section id="coursesGrid" class="courses-grid"></section>
+
+    <section class="section-head">
+      <div>
+        <p class="eyebrow">Historique</p>
+        <h2>Dernières séances</h2>
+      </div>
+      <button id="clearHistoryBtn" class="danger-ghost">Effacer l’historique</button>
+    </section>
+
+    <section class="history card">
+      <div id="historyList"></div>
+    </section>
+  </main>
+
+  <dialog id="attendanceDialog">
+    <form method="dialog" id="attendanceForm" class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Nouvelle entrée</p>
+          <h2>Encoder une séance</h2>
+        </div>
+        <button type="button" class="icon-btn" id="closeAttendanceBtn" aria-label="Fermer" onclick="document.getElementById('attendanceDialog').close()">×</button>
+      </div>
+
+      <label>
+        Cours
+        <select id="courseSelect" required></select>
+      </label>
+
+      <label>
+        Date
+        <input id="dateInput" type="date" required />
+      </label>
+
+      <fieldset>
+        <legend>Statut</legend>
+        <div class="status-grid">
+          <label class="status-option present">
+            <input type="radio" name="status" value="present" required />
+            <span>Présent</span>
+          </label>
+          <label class="status-option absent">
+            <input type="radio" name="status" value="absent" />
+            <span>Absent</span>
+          </label>
+          <label class="status-option justified">
+            <input type="radio" name="status" value="justified" />
+            <span>Justifié</span>
+          </label>
+          <label class="status-option cancelled">
+            <input type="radio" name="status" value="cancelled" />
+            <span>Annulé</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <label>
+        Note (facultatif)
+        <input id="noteInput" type="text" maxlength="120" placeholder="Ex. malade, prof absent…" />
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelAttendanceBtn">Annuler</button>
+        <button type="submit" class="primary">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="courseDialog">
+    <form method="dialog" id="courseForm" class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Réglages</p>
+          <h2>Modifier les cours</h2>
+        </div>
+        <button type="button" class="icon-btn" id="closeCourseBtn" aria-label="Fermer" onclick="document.getElementById('courseDialog').close()">×</button>
+      </div>
+      <p class="muted">Tu peux corriger le nombre total de jours si l’horaire change en cours d’année.</p>
+      <div id="courseSettingsList" class="settings-list"></div>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelCourseBtn">Annuler</button>
+        <button type="submit" class="primary">Sauvegarder</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detailsDialog">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Détail</p>
+          <h2 id="detailsTitle">Cours</h2>
+        </div>
+        <button type="button" class="icon-btn" id="closeDetailsBtn" aria-label="Fermer" onclick="document.getElementById('detailsDialog').close()">×</button>
+      </div>
+      <div id="detailsContent"></div>
+    </div>
+  </dialog>
+
+
+  <dialog id="scheduleDialog" class="schedule-dialog">
+    <div class="dialog-card schedule-card">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">IETC · Bac 2</p>
+          <h2>Horaire 2026–2027</h2>
+          <p class="muted schedule-subtitle">Version du 31/08/2026</p>
+        </div>
+        <button type="button" class="icon-btn" id="closeScheduleBtn"
+          onclick="document.getElementById('scheduleDialog').close()"
+          aria-label="Fermer">×</button>
+      </div>
+
+      <div class="schedule-toolbar">
+        <a class="secondary schedule-link" href="horaire-bac2-2026-2027.pdf" target="_blank" rel="noopener">
+          Ouvrir en plein écran
+        </a>
+      </div>
+
+      <div class="schedule-frame-wrap">
+        <iframe
+          id="scheduleFrame"
+          title="Horaire Bac 2 2026-2027"
+          src="horaire-bac2-2026-2027.pdf#view=FitH"
+          loading="lazy">
+        </iframe>
+      </div>
+    </div>
+  </dialog>
+
+  <template id="courseCardTemplate">
+    <article class="course-card card">
+      <div class="course-card-top">
+        <div>
+          <p class="course-day"></p>
+          <h3 class="course-name"></h3>
+        </div>
+        <span class="risk-badge"></span>
+      </div>
+      <div class="metric-row">
+        <span>Présence actuelle</span>
+        <strong class="presence-rate"></strong>
+      </div>
+      <div class="progress"><div class="progress-fill"></div></div>
+      <div class="course-stats">
+        <div><span>Absences</span><strong class="absence-count"></strong></div>
+        <div><span>Limite 40 %</span><strong class="absence-limit"></strong></div>
+        <div><span>Restantes</span><strong class="absence-left"></strong></div>
+      </div>
+      <button class="secondary full details-btn">Voir le détail</button>
+    </article>
+  </template>
+
+  <script src="app.js?v=4"></script>
+</body>
+</html>
