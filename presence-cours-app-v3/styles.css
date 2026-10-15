@@ -216,9 +216,6 @@ button, .file-label, .schedule-link { min-height: 44px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--info); outline-offset: 3px; }
 .skip-link { position: fixed; top: -100px; left: 16px; z-index: 20; padding: 12px; background: var(--surface); color: var(--text); }
 .skip-link:focus { top: 12px; }
-.backup-notice { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 4px 0; font-size: .85rem; }
-.backup-notice p { margin: 5px 0; color: var(--muted); }
-#connectionStatus { white-space: nowrap; color: var(--muted); }
 .quarter-tabs { display: flex; gap: 6px; padding: 5px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 15px; width: fit-content; }
 .quarter-tabs button { min-width: 100px; background: transparent; color: var(--muted); }
 .quarter-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 2px 5px #0001; }
@@ -254,7 +251,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .history-actions { grid-column: 1 / -1; }
   .notice { flex-wrap: wrap; }
   .notice span { flex-basis: 100%; }
-  .backup-notice { align-items: start; }
   .dialog-card { padding: 18px; }
 }
 

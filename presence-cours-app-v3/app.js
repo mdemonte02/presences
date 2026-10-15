@@ -148,8 +148,6 @@ function render() {
   document.body.classList.toggle("dark", state.dark);
   document.querySelectorAll("[data-quarter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.quarter === selectedQuarter)));
   document.getElementById("themeBtn").setAttribute("aria-pressed", String(state.dark));
-  const backup = localStorage.getItem("presenceCours.lastBackup");
-  if (backup) document.getElementById("backupStatus").textContent = `Dernier export : ${formatDate(backup)}. Exportez à nouveau après vos modifications.`;
   renderSummary();
   renderToday();
   renderCourses();
@@ -432,7 +430,6 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   a.download = `presence-cours-backup-${todayIso()}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  localStorage.setItem("presenceCours.lastBackup", todayIso());
   render();
   notify("Sauvegarde exportée. Conservez le fichier dans un endroit sûr.");
 });
@@ -482,12 +479,6 @@ document.getElementById("undoBtn").addEventListener("click", () => {
   state.entries = undoEntries; saveState(); render(); notify("Modification annulée.");
 });
 document.getElementById("dismissNotice").addEventListener("click", () => { document.getElementById("notice").hidden = true; undoEntries = null; });
-function connectionStatus() {
-  document.getElementById("connectionStatus").textContent = navigator.onLine ? "En ligne" : "Hors ligne";
-}
-window.addEventListener("online", connectionStatus);
-window.addEventListener("offline", connectionStatus);
-connectionStatus();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => notify("Le mode hors ligne n’a pas pu être préparé. Réessayez en ligne."));
 }
