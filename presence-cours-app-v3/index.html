@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#111827" />
   <title>Watchling</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg?v=17" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link rel="icon" href="icon.svg?v=19" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=19" />
 </head>
 <body>
   <header class="topbar" id="pageTop" tabindex="-1">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 96 96" focusable="false"><use href="logo.svg?v=17#presence"/></svg></span><div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 96 96" focusable="false"><use href="logo.svg?v=19#presence"/></svg></span><div>
       <h1>Watchling</h1>
     </div></div>
     <nav class="topbar-actions" aria-label="Navigation principale"><a href="#coursesHeading">Mes cours</a><a href="#historyHeading">Historique</a><button id="themeBtn" class="icon-btn" aria-label="Activer le thème sombre">☾</button></nav>
@@ -27,7 +27,7 @@
       <div class="hero-actions">
         <button id="addAttendanceBtn" class="primary">Encoder une séance</button>
         <details id="toolsMenu" class="tools-menu">
-          <summary aria-controls="toolsPanel"><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=17#settings"/></svg>Outils<svg class="ui-icon menu-chevron" aria-hidden="true"><use href="ui-icons.svg?v=17#chevron"/></svg></summary>
+          <summary aria-controls="toolsPanel"><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=19#settings"/></svg>Outils<svg class="ui-icon menu-chevron" aria-hidden="true"><use href="ui-icons.svg?v=19#chevron"/></svg></summary>
           <nav id="toolsPanel" class="tools-panel" aria-label="Outils Watchling">
             <div class="tools-group"><h3>Encodage</h3><button id="batchBtn" type="button">Encoder une journée</button></div>
             <div class="tools-group"><h3>Planning</h3><button id="scheduleBtn" type="button">Consulter l’horaire</button><button id="exceptionsBtn" type="button">Changements ponctuels</button><button id="settingsBtn" type="button">Réglages de l’horaire</button></div>
@@ -80,7 +80,7 @@
     </div>
   <div id="notice" class="notice" hidden><span id="noticeText" role="status"></span><button id="undoBtn" class="secondary">Annuler</button><button id="dismissNotice" class="secondary" aria-label="Fermer la notification">×</button></div>
   </main>
-  <a id="backToTop" class="back-to-top" href="#pageTop" aria-label="Revenir en haut" hidden><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=17#up"/></svg></a>
+  <a id="backToTop" class="back-to-top" href="#pageTop" aria-label="Revenir en haut" hidden><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=19#up"/></svg></a>
 
   <dialog id="attendanceDialog" aria-labelledby="attendanceTitle">
     <form method="dialog" id="attendanceForm" class="dialog-card">
@@ -150,6 +150,7 @@
         <button type="button" role="tab" id="settings-tab-quarters" aria-controls="settings-quarters" aria-selected="false" tabindex="-1" data-settings-tab="quarters">Quadrimestres</button>
         <button type="button" role="tab" id="settings-tab-holidays" aria-controls="settings-holidays" aria-selected="false" tabindex="-1" data-settings-tab="holidays">Congés</button>
       </div>
+      <div class="settings-scroll">
       <section role="tabpanel" id="settings-courses" aria-labelledby="settings-tab-courses">
         <label>Cours à modifier<select id="settingsCoursePicker"></select></label>
         <p class="muted">Le nombre de séances prévues sert à calculer le quota d’absences.</p>
@@ -166,6 +167,7 @@
         <div id="holidayList"></div><button id="addHolidayBtn" class="secondary" type="button">Ajouter un congé</button>
       </section>
       <p id="settingsError" class="form-error" role="alert"></p>
+      </div>
       <div class="dialog-actions">
         <button type="button" class="secondary" id="cancelCourseBtn">Annuler</button>
         <button type="submit" class="primary">Sauvegarder</button>
@@ -295,7 +297,7 @@
 
   <template id="courseRowTemplate">
     <tr class="course-row">
-      <th scope="row"><span class="course-name"></span><span class="course-day"></span></th>
+      <th scope="row"><span class="course-name"></span><span class="course-meta"><span class="course-day"></span><span class="course-today-marker" hidden>Aujourd’hui</span></span></th>
       <td><span class="presence-rate"></span></td>
       <td class="absence-fraction"><span class="absence-count"></span><span class="muted"> / <span class="absence-limit"></span></span></td>
       <td><strong class="absence-left"></strong></td>
@@ -304,7 +306,7 @@
     </tr>
   </template>
 
-  <script src="planning.js?v=17"></script>
-  <script src="app.js?v=17"></script>
+  <script src="planning.js?v=19"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>

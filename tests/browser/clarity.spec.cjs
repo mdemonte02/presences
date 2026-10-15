@@ -104,3 +104,41 @@ test('recomposition à une largeur équivalente au zoom 200 % sur un écran 1280
   await expect(page.locator('#weekDays')).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+test('repère du jour : suit les déplacements et annulations sans changer l’historique',async({page})=>{
+  await expect(page.locator('[data-course-row="computers"] .course-today-marker')).toBeVisible();
+  await expect(page.locator('[data-course-row="web"] .course-today-marker')).toBeHidden();
+  await clickTool(page,'settingsBtn');await saveSettings(page);
+  await page.evaluate(()=>{
+    const state=JSON.parse(localStorage.getItem('presenceCours.v1'));
+    state.calendar.exceptions=[{courseId:'web',date:'2026-10-12',action:'move',targetDate:'2026-10-15'},{courseId:'computers',date:'2026-10-15',action:'cancel',targetDate:''}];
+    localStorage.setItem('presenceCours.v1',JSON.stringify(state));
+  });await page.reload();
+  await expect(page.locator('[data-course-row="web"] .course-today-marker')).toBeVisible();
+  await expect(page.locator('[data-course-row="computers"] .course-today-marker')).toBeHidden();
+  expect((await readState(page)).entries).toHaveLength(0);
+});
+test('défilement : en-tête du tableau et actions des réglages restent accessibles',async({page})=>{
+  await clickTool(page,'settingsBtn');await saveSettings(page);
+  await page.evaluate(()=>{
+    const state=JSON.parse(localStorage.getItem('presenceCours.v1'));state.courses.forEach(course=>{course.quarter='Q1';});
+    localStorage.setItem('presenceCours.v1',JSON.stringify(state));
+  });await page.reload();
+  const table=page.locator('.courses-table-wrap');
+  await table.scrollIntoViewIfNeeded();
+  const header=page.locator('.courses-table thead th').first();
+  const before=await header.boundingBox();
+  expect(await table.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+  await table.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  const after=await header.boundingBox();expect(Math.abs(before.y-after.y)).toBeLessThanOrEqual(1);
+  await clickTool(page,'settingsBtn');await settingsTab(page,'holidays');
+  for(let i=0;i<10;i++)await page.locator('#addHolidayBtn').click();
+  const body=page.locator('.settings-scroll');
+  expect(await body.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+  const save=page.locator('#courseForm button[type=submit]');
+  const lower=await save.boundingBox();
+  expect(lower.y+lower.height).toBeLessThanOrEqual(1000);
+  await body.evaluate(el=>{el.scrollTop=0;});
+  const upper=await save.boundingBox();expect(Math.abs(lower.y-upper.y)).toBeLessThanOrEqual(1);
+  await page.locator('#cancelCourseBtn').click();await expect(page.locator('#courseDialog')).not.toBeVisible();
+  expect((await readState(page)).calendar.holidays).toHaveLength(0);
+});

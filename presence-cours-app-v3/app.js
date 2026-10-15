@@ -37,7 +37,7 @@ let reportSort = { key: "name", direction: "asc" };
 let courseSort = null;
 let weekOffset = 0;
 function iconMarkup(name) {
-  return `<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=17#${name}"/></svg>`;
+  return `<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=19#${name}"/></svg>`;
 }
 function decorateButtons(root = document) {
   root.querySelectorAll("button[data-icon]").forEach(button => {
@@ -261,6 +261,7 @@ function renderCourses() {
   grid.innerHTML = "";
 
   const available = visibleCourses();
+  const scheduledToday = new Set(Planning.scheduledCourses(state.courses, state.calendar, selectedQuarter, todayIso()).map(course => course.id));
   const courses = courseSort ? Planning.sortReport(available.map(course => { const m = metrics(course); return { ...course, ...m, presenceRate: m.completed ? m.presenceRate : null }; }), courseSort.key, courseSort.direction) : available;
   document.getElementById("coursesHeading").textContent = `Mes cours (${available.length})`;
   document.getElementById("coursesCaption").textContent = `Cours du ${selectedQuarter}`;
@@ -280,6 +281,8 @@ function renderCourses() {
     const todayEntry = state.entries.find(e => e.courseId === course.id && e.date === todayIso());
     const row = node.querySelector(".course-row");
     row.dataset.courseRow = course.id;
+    row.classList.toggle("is-scheduled-today", scheduledToday.has(course.id));
+    node.querySelector(".course-today-marker").hidden = !scheduledToday.has(course.id);
     if (todayEntry) {
       const status = node.querySelector(".row-today-status");
       status.hidden = false;
@@ -323,7 +326,7 @@ function renderHistory() {
   if (!entries.length) {
     list.innerHTML = state.entries.length
       ? '<div class="empty"><p>Aucune séance pour ces filtres.</p></div>'
-      : '<div class="empty empty-history"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="logo.svg?v=17#presence"/></svg><p>Aucune séance pour le moment</p></div>';
+      : '<div class="empty empty-history"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="logo.svg?v=19#presence"/></svg><p>Aucune séance pour le moment</p></div>';
     return;
   }
 
