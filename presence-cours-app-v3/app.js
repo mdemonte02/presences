@@ -114,10 +114,11 @@ function metrics(course) {
   const justified = entries.filter(e => e.status === "justified").length;
   const cancelled = entries.filter(e => e.status === "cancelled").length;
 
+  // Une absence justifiée compte comme une présence.
   // "Séances comptabilisées" = présent + absent + justifié.
   // Un cours annulé n'entre ni dans la présence actuelle, ni dans les absences.
   const completed = present + absent + justified;
-  const presenceRate = completed ? Math.round((present / completed) * 1000) / 10 : 100;
+  const presenceRate = completed ? Math.round(((present + justified) / completed) * 1000) / 10 : 100;
   const limit = maxAbsences(course.totalDays);
   const left = Math.max(0, limit - absent);
   const absenceRateAnnual = course.totalDays ? Math.round((absent / course.totalDays) * 1000) / 10 : 0;
@@ -150,6 +151,7 @@ function render() {
   const backup = localStorage.getItem("presenceCours.lastBackup");
   if (backup) document.getElementById("backupStatus").textContent = `Dernier export : ${formatDate(backup)}. Exportez à nouveau après vos modifications.`;
   renderSummary();
+  renderToday();
   renderCourses();
   renderHistory();
   populateCourseSelect();
@@ -158,7 +160,7 @@ function render() {
 function renderSummary() {
   const all = visibleCourses().map(metrics);
   const totalEntries = all.reduce((s,m) => s + m.completed, 0);
-  const totalPresent = all.reduce((s,m) => s + m.present, 0);
+  const totalPresent = all.reduce((s,m) => s + m.present + m.justified, 0);
   const totalAbsent = all.reduce((s,m) => s + m.absent, 0);
   const totalAllowed = visibleCourses().reduce((s,c) => s + maxAbsences(c.totalDays), 0);
   const globalPresence = totalEntries ? Math.round((totalPresent / totalEntries) * 1000) / 10 : 100;
@@ -169,6 +171,54 @@ function renderSummary() {
     <div class="summary-card"><span>Maximum d’absences</span><strong>${totalAllowed}</strong></div>
     <div class="summary-card"><span>Séances encodées</span><strong>${totalEntries}</strong></div>
   `;
+}
+
+function renderToday() {
+  const date = todayIso();
+  const day = new Intl.DateTimeFormat("fr-BE", { weekday: "long" }).format(new Date(date + "T12:00:00"));
+  document.getElementById("todayDate").textContent = `${formatDate(date)} · ${selectedQuarter}`;
+  const list = document.getElementById("todayCourses");
+  list.replaceChildren();
+  const courses = visibleCourses().filter(course => course.day.split("/").some(value => value.trim().toLocaleLowerCase("fr-BE") === day));
+  if (!courses.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Aucun cours prévu ce jour pour ce quadrimestre dans l’horaire renseigné.";
+    list.appendChild(empty);
+  }
+  courses.forEach(course => {
+    const entry = state.entries.find(item => item.courseId === course.id && item.date === date);
+    const row = document.createElement("article");
+    row.className = "today-course";
+    const info = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = course.name;
+    const status = document.createElement("p");
+    status.className = entry ? `status-pill status-${entry.status}` : "muted";
+    status.textContent = entry ? statusLabels[entry.status] : "À encoder";
+    info.append(title, status);
+    const actions = document.createElement("div");
+    actions.className = "today-actions";
+    if (entry) {
+      const edit = document.createElement("button");
+      edit.className = "secondary";
+      edit.textContent = "Modifier la séance";
+      edit.setAttribute("aria-label", `Modifier la séance : ${course.name}`);
+      edit.addEventListener("click", () => openAttendance(entry));
+      actions.appendChild(edit);
+    } else {
+      for (const value of ["present", "absent"]) {
+        const button = document.createElement("button");
+        button.className = value === "present" ? "primary" : "secondary";
+        button.textContent = statusLabels[value];
+        button.setAttribute("aria-label", `${statusLabels[value]} : ${course.name}`);
+        button.addEventListener("click", () => quickAttendance(course.id, value));
+        actions.appendChild(button);
+      }
+    }
+    row.append(info, actions);
+    list.appendChild(row);
+  });
 }
 
 function renderCourses() {
@@ -443,3 +493,12 @@ if ("serviceWorker" in navigator) {
 }
 migrateCourseNames();
 render();
+
+// Actualiser le jour affiché si l’application reste ouverte pendant la nuit.
+let renderedDate = todayIso();
+function refreshDay() {
+  if (renderedDate !== todayIso()) { renderedDate = todayIso(); render(); }
+}
+window.addEventListener("focus", refreshDay);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshDay(); });
+setInterval(refreshDay, 60_000);

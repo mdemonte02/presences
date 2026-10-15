@@ -257,3 +257,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .backup-notice { align-items: start; }
   .dialog-card { padding: 18px; }
 }
+
+.today-panel { padding: 20px; margin: 20px 0; box-shadow: none; }
+.today-panel .section-head { margin: 0; align-items: center; flex-wrap: wrap; }
+.today-course { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
+.today-course h3 { margin: 0 0 8px; font-size: 1rem; }
+.today-course p { margin: 0; width: fit-content; font-size: .85rem; }
+.today-actions { display: flex; gap: 8px; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .today-course { flex-direction: column; align-items: stretch; }
+  .today-actions button { flex: 1; }
+}

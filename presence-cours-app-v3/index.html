@@ -7,7 +7,7 @@
   <title>Présence Cours</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <header class="topbar">
@@ -49,7 +49,12 @@
     </section>
 
     <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
-    <p class="muted">Les indicateurs ci-dessus concernent le quadrimestre sélectionné. Les absences justifiées sont exclues de la limite de 40 % ; vérifiez cette règle auprès de votre établissement.</p>
+    <p class="muted">Les indicateurs ci-dessus concernent le quadrimestre sélectionné. Les absences justifiées comptent comme des présences. Seules les absences injustifiées réduisent votre quota de 40 %. Une seule séance est comptée par cours et par jour.</p>
+    <section class="today-panel card" aria-labelledby="todayTitle">
+      <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><span id="todayDate" class="muted"></span></div>
+      <p class="muted">Planning indicatif selon les jours renseignés et le quadrimestre sélectionné. Les congés et changements d’horaire ne sont pas pris en compte.</p>
+      <div id="todayCourses"></div>
+    </section>
     <section id="coursesGrid" tabindex="-1" class="courses-grid"></section>
 
     <section class="section-head">
@@ -207,6 +212,6 @@
     </article>
   </template>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
