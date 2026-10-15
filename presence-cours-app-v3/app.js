@@ -710,7 +710,7 @@ document.getElementById("csvHistoryBtn").addEventListener("click", () => {
 });
 document.getElementById("printReportBtn").addEventListener("click", () => {
   const report = document.getElementById("printReport");
-  report.innerHTML = `<h1>Présence Cours · ${selectedQuarter}</h1><p>Bilan au ${formatDate(todayIso())}</p><table><thead><tr>${["Cours", "Présences", "Justifiées", "Injustifiées", "Annulées", "Taux", "Maximum", "Restantes"].map(label => `<th scope="col">${label}</th>`).join("")}</tr></thead><tbody>${reportTable(reportData())}</tbody></table>`;
+  report.innerHTML = `<h1>Watchling · ${selectedQuarter}</h1><p>Bilan au ${formatDate(todayIso())}</p><table><thead><tr>${["Cours", "Présences", "Justifiées", "Injustifiées", "Annulées", "Taux", "Maximum", "Restantes"].map(label => `<th scope="col">${label}</th>`).join("")}</tr></thead><tbody>${reportTable(reportData())}</tbody></table>`;
   window.print();
 });
 document.getElementById("missingBtn").addEventListener("click", () => {

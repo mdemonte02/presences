@@ -1,4 +1,4 @@
-# Présence Cours
+# Watchling
 
 Application statique de suivi des présences. Les données sont conservées dans le navigateur ; les sauvegardes JSON permettent leur transfert manuel. Aucun serveur métier n'est requis.
 

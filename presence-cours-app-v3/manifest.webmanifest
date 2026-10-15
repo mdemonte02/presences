@@ -1,6 +1,6 @@
 {
-  "name": "Présence Cours",
-  "short_name": "Présences",
+  "name": "Watchling",
+  "short_name": "Watchling",
   "description": "Suivi de présence et limite de 40 % d'absences par cours.",
   "start_url": "./",
   "display": "standalone",
@@ -8,7 +8,7 @@
   "theme_color": "#111827",
   "icons": [
     {
-      "src": "icon.svg?v=13",
+      "src": "icon.svg?v=14",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
