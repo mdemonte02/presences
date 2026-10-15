@@ -307,17 +307,24 @@ button:not(:disabled):active, .schedule-link:active, .tools-menu summary:active,
 .brand-mark svg { transform-origin: 50% 80%; }
 .tools-menu[open] .tools-panel { animation: menu-arrival .18s ease-out; }
 .notice:not([hidden]) { animation: state-arrival .2s ease-out; }
-@keyframes logo-peek {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  30% { transform: translateY(-3px) rotate(-9deg); }
-  65% { transform: translateY(-2px) rotate(6deg); }
+/* Le personnage se baisse, surgit puis regarde de chaque côté. */
+@keyframes logo-lookout {
+  0%, 8%, 100% { transform: translate(0, 0) rotate(0) scale(1); }
+  18% { transform: translate(0, 6px) rotate(0) scale(.92, .78); }
+  30% { transform: translate(-6px, -7px) rotate(-18deg) scale(1.06, 1.12); }
+  40% { transform: translate(-5px, -3px) rotate(-14deg) scale(1); }
+  52% { transform: translate(6px, -5px) rotate(18deg) scale(1.04, 1.06); }
+  62% { transform: translate(5px, -2px) rotate(14deg) scale(1); }
+  74% { transform: translate(0, -4px) rotate(0) scale(1.04); }
+  82% { transform: translate(0, 2px) rotate(0) scale(1.05, .94); }
+  90% { transform: translate(0, 0) rotate(0) scale(1); }
 }
 @keyframes menu-arrival {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @media (hover: hover) and (pointer: fine) {
-  .brand:hover .brand-mark svg { animation: logo-peek .65s ease-in-out; }
+  .brand-mark:hover svg { animation: logo-lookout 2.4s cubic-bezier(.45, 0, .25, 1) infinite; }
   :is(.primary, .secondary, .icon-btn, .schedule-link, .tools-menu summary, .back-to-top):not(:disabled):hover {
     transform: translateY(-2px);
     box-shadow: 0 3px 8px color-mix(in srgb, var(--text) 10%, transparent);
