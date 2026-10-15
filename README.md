@@ -52,3 +52,17 @@ Les tests navigateur comprennent des contrôles axe-core ciblés sur les règles
 ## Mode hors ligne
 
 Après une première visite en ligne sur HTTPS (ou localhost), le service worker met les ressources en cache. Le réseau est prioritaire pour récupérer les mises à jour. Après une modification des ressources, incrémenter la version des URL dans `index.html` ainsi que le nom du cache et la liste des ressources dans `sw.js`.
+
+### Publication sur GitHub Pages
+
+Dans les réglages du dépôt, ouvrir **Settings → Pages**, puis sélectionner
+**GitHub Actions** dans **Build and deployment → Source**.
+Le workflow **Publier Watchling sur GitHub Pages** publie le dossier
+`presence-cours-app-v3` après les vérifications JavaScript et les tests unitaires,
+à chaque envoi sur `main`. Il peut aussi être lancé depuis **Actions → Publier
+Watchling sur GitHub Pages → Run workflow**, en choisissant `main`.
+
+Adresse attendue : https://mdemonte02.github.io/presences/
+
+Les données locales sont propres à chaque adresse : exporter les données depuis
+le site Netlify, puis les importer sur GitHub Pages pour les transférer.
