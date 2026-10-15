@@ -1,0 +1,7 @@
+[build]
+  base = "."
+  publish = "presence-cours-app-v3"
+  command = "npm run check && npm test"
+
+[build.environment]
+  NODE_VERSION = "24"

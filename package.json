@@ -1,0 +1,13 @@
+{
+  "name": "presence-cours",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/planning.test.cjs",
+    "test:browser": "playwright test",
+    "check": "node --check presence-cours-app-v3/app.js && node --check presence-cours-app-v3/planning.js && node --check presence-cours-app-v3/sw.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}

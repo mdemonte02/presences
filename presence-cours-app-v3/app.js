@@ -1,3 +1,4 @@
+const Planning = PresencePlanning;
 const STORAGE_KEY = "presenceCours.v1";
 
 const DEFAULT_COURSES = [
@@ -23,8 +24,8 @@ let state = loadState();
 let selectedQuarter = localStorage.getItem("presenceCours.quarter") === "Q2" ? "Q2" : "Q1";
 let editingId = null;
 let undoEntries = null;
-const q1Ids = new Set(["web", "os2", "ebusiness", "computers", "math"]);
-function visibleCourses() { return state.courses.filter(c => q1Ids.has(c.id) === (selectedQuarter === "Q1")); }
+let detailsCourseId = null;
+function visibleCourses() { return state.courses.filter(c => Planning.quarterOf(c) === selectedQuarter); }
 function notify(message, previous = null) {
   undoEntries = previous;
   document.getElementById("noticeText").textContent = message;
@@ -56,17 +57,20 @@ function quickAttendance(courseId, status) {
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) {
-    return { courses: structuredClone(DEFAULT_COURSES), entries: [], dark: false };
+    return { courses: structuredClone(DEFAULT_COURSES), entries: [], dark: false, calendar: Planning.emptyCalendar() };
   }
   try {
     const parsed = JSON.parse(saved);
+    let calendar = Planning.emptyCalendar();
+    try { if (parsed.calendar) calendar = Planning.validateCalendar(parsed.calendar); } catch { /* Préserver les séances si seul le calendrier local est endommagé. */ }
     return {
       courses: Array.isArray(parsed.courses) ? parsed.courses : structuredClone(DEFAULT_COURSES),
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+      calendar,
       dark: !!parsed.dark
     };
   } catch {
-    return { courses: structuredClone(DEFAULT_COURSES), entries: [], dark: false };
+    return { courses: structuredClone(DEFAULT_COURSES), entries: [], dark: false, calendar: Planning.emptyCalendar() };
   }
 }
 
@@ -173,11 +177,10 @@ function renderSummary() {
 
 function renderToday() {
   const date = todayIso();
-  const day = new Intl.DateTimeFormat("fr-BE", { weekday: "long" }).format(new Date(date + "T12:00:00"));
   document.getElementById("todayDate").textContent = `${formatDate(date)} · ${selectedQuarter}`;
   const list = document.getElementById("todayCourses");
   list.replaceChildren();
-  const courses = visibleCourses().filter(course => course.day.split("/").some(value => value.trim().toLocaleLowerCase("fr-BE") === day));
+  const courses = Planning.scheduledCourses(state.courses, state.calendar, selectedQuarter, date);
   if (!courses.length) {
     const empty = document.createElement("p");
     empty.className = "muted";
@@ -230,7 +233,7 @@ function renderCourses() {
     const m = metrics(course);
     const [label, cls] = riskLabel(m);
 
-    node.querySelector(".course-day").textContent = course.day;
+    node.querySelector(".course-day").textContent = course.day || "Jours à définir";
     node.querySelector(".course-name").textContent = course.name;
     node.querySelector(".presence-rate").textContent = m.completed ? `${m.presenceRate}%` : "—";
     node.querySelector(".progress-fill").style.width = `${m.completed ? Math.max(0, Math.min(100, m.presenceRate)) : 0}%`;
@@ -300,17 +303,30 @@ function populateCourseSelect() {
 }
 
 function showDetails(courseId) {
-  const course = state.courses.find(c => c.id === courseId);
-  const m = metrics(course);
-  const list = entriesFor(course.id).sort((a,b) => b.date.localeCompare(a.date));
+  detailsCourseId = courseId;
+  document.getElementById("detailsStart").value = "";
+  document.getElementById("detailsEnd").value = "";
+  renderDetails();
+  document.getElementById("detailsDialog").showModal();
+}
+
+function renderDetails() {
+  const start = document.getElementById("detailsStart").value;
+  const end = document.getElementById("detailsEnd").value;
+  const error = document.getElementById("detailsError");
+  error.textContent = start && end && start > end ? "La date de fin doit suivre la date de début." : "";
+  const course = state.courses.find(c => c.id === detailsCourseId);
   document.getElementById("detailsTitle").textContent = course.name;
+  if (error.textContent) { document.getElementById("detailsContent").replaceChildren(); return; }
+  const list = Planning.inPeriod(entriesFor(course.id), start, end).sort((a,b) => b.date.localeCompare(a.date));
+  const summary = Planning.statistics(list);
+  const annual = metrics(course);
   document.getElementById("detailsContent").innerHTML = `
-    <div class="detail-stats">
-      <div class="detail-stat"><span>Présence sur les séances encodées</span><strong>${m.completed ? m.presenceRate + "%" : "—"}</strong></div>
-      <div class="detail-stat"><span>Absences injustifiées</span><strong>${m.absent} / ${m.limit}</strong></div>
-      <div class="detail-stat"><span>Encore disponibles</span><strong>${m.left}</strong></div>
+    <div class="detail-stats period-stats">
+      ${Object.entries(statusLabels).map(([key, label]) => `<div class="detail-stat"><span>${label}</span><strong data-stat="${key}">${summary[key]}</strong></div>`).join("")}
+      <div class="detail-stat"><span>Présence sur la période</span><strong data-stat="rate">${summary.presenceRate === null ? "—" : summary.presenceRate + "%"}</strong></div>
     </div>
-    <p class="muted">${course.totalDays} jours prévus · ${m.completed} séance(s) comptabilisée(s) · ${m.justified} justifiée(s) · ${m.cancelled} annulée(s)</p>
+    <p class="muted">Quota du cours entier : ${annual.absent} absence(s) injustifiée(s) sur ${annual.limit} maximum · ${annual.left} restante(s).</p>
     <div class="detail-history">
       ${list.length ? list.map(e => `
         <div class="history-item">
@@ -318,23 +334,61 @@ function showDetails(courseId) {
           <span>${e.note ? escapeHtml(e.note) : "—"}</span>
           <span class="status-pill status-${e.status}">${statusLabels[e.status]}</span>
         </div>
-      `).join("") : `<div class="empty">Aucune séance pour ce cours.</div>`}
-    </div>
-  `;
-  document.getElementById("detailsDialog").showModal();
+      `).join("") : `<div class="empty">Aucune séance sur cette période.</div>`}
+    </div>`;
+}
+
+function holidayRow(holiday = { label: "", start: "", end: "" }) {
+  const row = document.createElement("div");
+  row.className = "holiday-row";
+  row.innerHTML = `<label>Libellé<input type="text" maxlength="80" data-holiday-label value="${escapeHtml(holiday.label)}" placeholder="Congé"></label>
+    <label>Du<input type="date" data-holiday-start required value="${escapeHtml(holiday.start)}"></label>
+    <label>Au<input type="date" data-holiday-end required value="${escapeHtml(holiday.end)}"></label>
+    <button class="secondary" type="button" aria-label="Supprimer ce congé">Supprimer</button>`;
+  row.querySelector("button").addEventListener("click", () => row.remove());
+  return row;
 }
 
 function openCourseSettings() {
   const wrap = document.getElementById("courseSettingsList");
   wrap.innerHTML = state.courses.map(c => `
-    <div class="settings-row">
-      <div><strong>${escapeHtml(c.name)}</strong><div class="muted">${escapeHtml(c.day)}</div></div>
-      <label>Jours
-        <input type="number" min="1" max="100" step="1" value="${c.totalDays}" data-course-days="${escapeHtml(c.id)}">
-      </label>
-    </div>
-  `).join("");
+    <fieldset class="course-setting" data-course="${escapeHtml(c.id)}">
+      <legend>${escapeHtml(c.name)}</legend>
+      <div class="settings-controls">
+        <label>Quadrimestre<select data-course-quarter><option value="Q1" ${Planning.quarterOf(c) === "Q1" ? "selected" : ""}>Q1</option><option value="Q2" ${Planning.quarterOf(c) === "Q2" ? "selected" : ""}>Q2</option></select></label>
+        <label>Séances prévues<input type="number" min="1" max="100" step="1" required value="${c.totalDays}" data-course-days></label>
+      </div>
+      <div class="weekday-options" role="group" aria-label="Jours de ${escapeHtml(c.name)}">${Planning.DAYS.slice(1).concat(Planning.DAYS[0]).map(day => `<label><input type="checkbox" data-weekday value="${day}" ${c.day.split("/").some(value => value.trim().toLowerCase() === day.toLowerCase()) ? "checked" : ""}>${day}</label>`).join("")}</div>
+    </fieldset>`).join("");
+  for (const key of ["Q1", "Q2"]) {
+    document.getElementById(`${key}Start`).value = state.calendar.quarters[key].start;
+    document.getElementById(`${key}End`).value = state.calendar.quarters[key].end;
+  }
+  const holidays = document.getElementById("holidayList");
+  holidays.replaceChildren(...state.calendar.holidays.map(holidayRow));
+  document.getElementById("settingsError").textContent = "";
   document.getElementById("courseDialog").showModal();
+}
+
+function renderBatch() {
+  const date = document.getElementById("batchDate").value;
+  const planned = new Set(Planning.scheduledCourses(state.courses, state.calendar, selectedQuarter, date).map(c => c.id));
+  document.getElementById("batchError").textContent = "";
+  document.getElementById("batchRows").innerHTML = visibleCourses().map(course => {
+    const entry = state.entries.find(e => e.courseId === course.id && e.date === date);
+    return `<tr data-batch-course="${escapeHtml(course.id)}">
+      <td><input type="checkbox" data-batch-include aria-label="Inclure ${escapeHtml(course.name)}" ${planned.has(course.id) && !entry ? "checked" : ""}></td>
+      <th scope="row">${escapeHtml(course.name)}<small>${entry ? "Déjà encodé" : planned.has(course.id) ? "Prévu" : "Non prévu"}</small></th>
+      <td><select data-batch-status aria-label="Statut de ${escapeHtml(course.name)}">${Object.entries(statusLabels).map(([value,label]) => `<option value="${value}" ${(entry?.status ?? "present") === value ? "selected" : ""}>${label}</option>`).join("")}</select></td>
+      <td><input data-batch-note type="text" maxlength="120" aria-label="Note pour ${escapeHtml(course.name)}" value="${escapeHtml(entry?.note ?? "")}"></td>
+    </tr>`;
+  }).join("");
+  updateBatchCount();
+}
+function updateBatchCount() {
+  const count = document.querySelectorAll("[data-batch-include]:checked").length;
+  document.getElementById("batchSave").textContent = `Enregistrer (${count})`;
+  document.getElementById("batchSave").disabled = !count;
 }
 
 function escapeHtml(text) {
@@ -395,14 +449,21 @@ document.getElementById("cancelCourseBtn").addEventListener("click", () => docum
 
 document.getElementById("courseForm").addEventListener("submit", (ev) => {
   ev.preventDefault();
-  document.querySelectorAll("[data-course-days]").forEach(input => {
-    const course = state.courses.find(c => c.id === input.dataset.courseDays);
-    const val = Number(input.value);
-    if (course && Number.isFinite(val) && val >= 1) course.totalDays = Math.round(val);
+  const calendar = { quarters: {}, holidays: [] };
+  for (const key of ["Q1", "Q2"]) calendar.quarters[key] = { start: document.getElementById(`${key}Start`).value, end: document.getElementById(`${key}End`).value };
+  calendar.holidays = [...document.querySelectorAll(".holiday-row")].map(row => ({ label: row.querySelector("[data-holiday-label]").value.trim(), start: row.querySelector("[data-holiday-start]").value, end: row.querySelector("[data-holiday-end]").value }));
+  try { Planning.validateCalendar(calendar); }
+  catch (error) { document.getElementById("settingsError").textContent = error.message; return; }
+  const courses = state.courses.map(course => {
+    const row = [...document.querySelectorAll("[data-course]")].find(row => row.dataset.course === course.id);
+    return { ...course, quarter: row.querySelector("[data-course-quarter]").value, totalDays: Number(row.querySelector("[data-course-days]").value), day: [...row.querySelectorAll("[data-weekday]:checked")].map(input => input.value).join(" / ") };
   });
+  state.calendar = calendar;
+  state.courses = courses;
   saveState();
   document.getElementById("courseDialog").close();
   render();
+  notify("Horaire enregistré.");
 });
 
 document.getElementById("closeDetailsBtn").addEventListener("click", () => document.getElementById("detailsDialog").close());
@@ -443,6 +504,7 @@ document.getElementById("importInput").addEventListener("change", async (ev) => 
     const ids = new Set();
     for (const c of parsed.courses) {
       if (typeof c.id !== "string" || ids.has(c.id) || !DEFAULT_COURSES.some(d => d.id === c.id) || typeof c.name !== "string" || typeof c.day !== "string" || !Number.isInteger(c.totalDays) || c.totalDays < 1 || c.totalDays > 100) throw new Error();
+      if (c.quarter !== undefined && !["Q1", "Q2"].includes(c.quarter)) throw new Error();
       ids.add(c.id);
     }
     const entryIds = new Set(), sessions = new Set();
@@ -451,8 +513,9 @@ document.getElementById("importInput").addEventListener("change", async (ev) => 
       if (typeof e.id !== "string" || entryIds.has(e.id) || sessions.has(session) || !ids.has(e.courseId) || !Object.hasOwn(statusLabels, e.status) || typeof e.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e.date) || !Number.isFinite(Date.parse(e.date)) || new Date(e.date).toISOString().slice(0,10) !== e.date || typeof e.note !== "string" || typeof e.createdAt !== "string") throw new Error();
       entryIds.add(e.id); sessions.add(session);
     }
+    const calendar = parsed.calendar ? Planning.validateCalendar(parsed.calendar) : Planning.emptyCalendar();
     if (!confirm("Importer cette sauvegarde remplacera les cours et l’historique actuels. Continuer ?")) { ev.target.value = ""; return; }
-    state = { courses: parsed.courses, entries: parsed.entries, dark: !!parsed.dark };
+    state = { courses: parsed.courses, entries: parsed.entries, dark: !!parsed.dark, calendar };
     saveState();
     document.getElementById("resetFilters").click();
     render();
@@ -479,6 +542,36 @@ document.getElementById("undoBtn").addEventListener("click", () => {
   state.entries = undoEntries; saveState(); render(); notify("Modification annulée.");
 });
 document.getElementById("dismissNotice").addEventListener("click", () => { document.getElementById("notice").hidden = true; undoEntries = null; });
+document.getElementById("addHolidayBtn").addEventListener("click", () => {
+  const row = holidayRow(); document.getElementById("holidayList").appendChild(row); row.querySelector("input").focus();
+});
+for (const id of ["detailsStart", "detailsEnd"]) document.getElementById(id).addEventListener("change", renderDetails);
+document.getElementById("resetPeriod").addEventListener("click", () => {
+  document.getElementById("detailsStart").value = ""; document.getElementById("detailsEnd").value = ""; renderDetails();
+});
+document.getElementById("batchBtn").addEventListener("click", () => {
+  document.getElementById("batchDate").value = todayIso();
+  document.getElementById("batchQuarter").textContent = selectedQuarter;
+  renderBatch(); document.getElementById("batchDialog").showModal();
+});
+document.getElementById("closeBatchBtn").addEventListener("click", () => document.getElementById("batchDialog").close());
+document.getElementById("cancelBatchBtn").addEventListener("click", () => document.getElementById("batchDialog").close());
+document.getElementById("batchDate").addEventListener("change", renderBatch);
+document.getElementById("batchRows").addEventListener("change", updateBatchCount);
+document.getElementById("batchForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const date = document.getElementById("batchDate").value;
+  const rows = [...document.querySelectorAll("[data-batch-course]")].filter(row => row.querySelector("[data-batch-include]").checked).map(row => ({ courseId: row.dataset.batchCourse, status: row.querySelector("[data-batch-status]").value, note: row.querySelector("[data-batch-note]").value.trim() }));
+  const previous = snapshot();
+  let next;
+  try { next = Planning.applyBatch(state.entries, date, rows, state.courses, () => crypto.randomUUID(), new Date().toISOString()); }
+  catch (error) { document.getElementById("batchError").textContent = error.message; return; }
+  const replacements = rows.filter(row => state.entries.some(e => e.courseId === row.courseId && e.date === date)).length;
+  if (replacements && !confirm(`${replacements} séance(s) déjà encodée(s) seront remplacées. Continuer ?`)) return;
+  state.entries = next; saveState(); render();
+  document.getElementById("batchDialog").close();
+  notify(`${rows.length} séance(s) enregistrée(s).`, previous);
+});
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => notify("Le mode hors ligne n’a pas pu être préparé. Réessayez en ligne."));
 }

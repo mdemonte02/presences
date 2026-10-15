@@ -7,7 +7,7 @@
   <title>Présence Cours</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body>
   <header class="topbar">
@@ -27,6 +27,7 @@
       </div>
       <div class="hero-actions">
         <button id="addAttendanceBtn" class="primary">+ Encoder une séance</button>
+        <button id="batchBtn" class="secondary">Encoder une journée</button>
         <button id="scheduleBtn" class="secondary">Horaire</button>
         <button id="exportBtn" class="secondary">Exporter</button>
         <button id="importBtn" class="secondary" type="button">Importer</button>
@@ -44,7 +45,7 @@
         <p class="eyebrow">Matières</p>
         <h2>Mes cours</h2>
       </div>
-      <button id="settingsBtn" class="secondary">Modifier les cours</button>
+      <button id="settingsBtn" class="secondary">Réglages de l’horaire</button>
     </section>
 
     <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
@@ -123,17 +124,26 @@
     </form>
   </dialog>
 
-  <dialog id="courseDialog">
+  <dialog id="courseDialog" aria-labelledby="settingsTitle">
     <form method="dialog" id="courseForm" class="dialog-card">
       <div class="dialog-head">
         <div>
           <p class="eyebrow">Réglages</p>
-          <h2>Modifier les cours</h2>
+          <h2>Réglages de l’horaire</h2>
         </div>
         <button type="button" class="icon-btn" id="closeCourseBtn" aria-label="Fermer" onclick="document.getElementById('courseDialog').close()">×</button>
       </div>
-      <p class="muted">Tu peux corriger le nombre total de jours si l’horaire change en cours d’année.</p>
+      <h3>Quadrimestres</h3>
+      <p class="muted">Laissez les dates vides si elles ne sont pas encore connues. Elles limitent les cours proposés dans « Aujourd’hui ».</p>
+      <div class="quarter-dates">
+        <fieldset><legend>Q1</legend><label>Début<input id="Q1Start" type="date"></label><label>Fin<input id="Q1End" type="date"></label></fieldset>
+        <fieldset><legend>Q2</legend><label>Début<input id="Q2Start" type="date"></label><label>Fin<input id="Q2End" type="date"></label></fieldset>
+      </div>
+      <h3>Congés et jours sans cours</h3>
+      <div id="holidayList"></div><button id="addHolidayBtn" class="secondary" type="button">Ajouter un congé</button>
+      <h3>Cours</h3><p class="muted">Le nombre de séances prévues sert à calculer le quota d’absences. Il reste modifiable indépendamment des dates.</p>
       <div id="courseSettingsList" class="settings-list"></div>
+      <p id="settingsError" class="form-error" role="alert"></p>
       <div class="dialog-actions">
         <button type="button" class="secondary" id="cancelCourseBtn">Annuler</button>
         <button type="submit" class="primary">Sauvegarder</button>
@@ -141,7 +151,7 @@
     </form>
   </dialog>
 
-  <dialog id="detailsDialog">
+  <dialog id="detailsDialog" aria-labelledby="detailsTitle">
     <div class="dialog-card">
       <div class="dialog-head">
         <div>
@@ -150,6 +160,8 @@
         </div>
         <button type="button" class="icon-btn" id="closeDetailsBtn" aria-label="Fermer" onclick="document.getElementById('detailsDialog').close()">×</button>
       </div>
+      <div class="period-filters"><label>Du<input type="date" id="detailsStart"></label><label>Au<input type="date" id="detailsEnd"></label><button id="resetPeriod" class="secondary">Toute la période</button></div>
+      <p id="detailsError" class="form-error" role="alert"></p>
       <div id="detailsContent"></div>
     </div>
   </dialog>
@@ -185,6 +197,17 @@
     </div>
   </dialog>
 
+  <dialog id="batchDialog" aria-labelledby="batchTitle">
+    <form id="batchForm" class="dialog-card">
+      <div class="dialog-head"><div><p class="eyebrow" id="batchQuarter"></p><h2 id="batchTitle">Encoder une journée</h2></div><button id="closeBatchBtn" type="button" class="icon-btn" aria-label="Fermer">×</button></div>
+      <label>Date<input type="date" id="batchDate" required></label>
+      <p class="muted">Les cours prévus sont présélectionnés. Cochez les autres si nécessaire ; les séances déjà encodées restent décochées.</p>
+      <div class="table-wrap"><table class="batch-table"><thead><tr><th scope="col">Inclure</th><th scope="col">Cours</th><th scope="col">Statut</th><th scope="col">Note</th></tr></thead><tbody id="batchRows"></tbody></table></div>
+      <p id="batchError" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" id="cancelBatchBtn" class="secondary">Annuler</button><button type="submit" id="batchSave" class="primary">Enregistrer</button></div>
+    </form>
+  </dialog>
+
   <template id="courseCardTemplate">
     <article class="course-card card">
       <div class="course-card-top">
@@ -209,6 +232,7 @@
     </article>
   </template>
 
-  <script src="app.js?v=8"></script>
+  <script src="planning.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
