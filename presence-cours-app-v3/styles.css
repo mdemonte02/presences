@@ -296,6 +296,38 @@ body:has(#notice:not([hidden])) .back-to-top { bottom: 88px; }
 dialog[open] > .dialog-card { animation: dialog-arrival .14s ease-out; }
 @keyframes state-arrival { from { opacity: .5; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes dialog-arrival { from { opacity: .6; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+/* Micro-interactions: mouvement bref, sans animation permanente. */
+button, .schedule-link, .tools-menu summary, .back-to-top {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease,
+    transform .18s ease, box-shadow .18s ease;
+}
+button:not(:disabled):active, .schedule-link:active, .tools-menu summary:active, .back-to-top:active {
+  transform: translateY(1px) scale(.98);
+}
+.brand-mark svg { transform-origin: 50% 80%; }
+.tools-menu[open] .tools-panel { animation: menu-arrival .18s ease-out; }
+.notice:not([hidden]) { animation: state-arrival .2s ease-out; }
+@keyframes logo-peek {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  30% { transform: translateY(-3px) rotate(-9deg); }
+  65% { transform: translateY(-2px) rotate(6deg); }
+}
+@keyframes menu-arrival {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .brand:hover .brand-mark svg { animation: logo-peek .65s ease-in-out; }
+  :is(.primary, .secondary, .icon-btn, .schedule-link, .tools-menu summary, .back-to-top):not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px color-mix(in srgb, var(--text) 10%, transparent);
+  }
+  :is(.primary, .secondary, .icon-btn, .schedule-link, .tools-menu summary, .back-to-top):not(:disabled):active {
+    transform: translateY(1px) scale(.98);
+    box-shadow: none;
+  }
+  .tools-panel button:not(:disabled):hover { transform: translateX(2px); }
+}
 @media (max-width: 1100px) {
   .hero { align-items: flex-start; }
   .hero-actions { max-width: 410px; flex-shrink: 1; }
@@ -326,7 +358,7 @@ dialog[open] > .dialog-card { animation: dialog-arrival .14s ease-out; }
   .period-filters { flex-wrap: wrap; }
   .notice { flex-wrap: wrap; }
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } button, .schedule-link, .tools-menu summary, .back-to-top { transform: none !important; } }
 @media print {
   @page { size: A4 landscape; margin: 15mm; }
   html, body { min-height: 0 !important; height: auto !important; }
