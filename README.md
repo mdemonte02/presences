@@ -12,6 +12,8 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory presence-cours-app-v3
 
 ## Utilisation
 
+La présentation est claire et compacte par défaut. Le tableau des cours se trie par nom, taux de présence, absences ou quota restant en cliquant sur les en-têtes. Les boutons Présent et Absent d’une ligne encodent la date du jour ; Détail ouvre le bilan du cours. Le thème sombre reste disponible et le choix est mémorisé.
+
 - **Réglages de l’horaire** : choisir les jours et le quadrimestre de chaque cours, les dates de Q1/Q2 et les congés. Les dates sont facultatives ; une période renseignée inclut son premier et son dernier jour. Un jour sans case cochée n'est pas proposé dans « Aujourd’hui ». Le nombre de séances prévues reste indépendant du calendrier et détermine la limite de 40 %.
 - **Encoder une journée** : choisir une date, cocher les cours à enregistrer et définir leur statut et leur note. Les cours prévus pour le quadrimestre sélectionné sont présélectionnés, sauf ceux déjà encodés. Les autres cours peuvent être cochés manuellement. Un remplacement demande confirmation ; le bouton Annuler de la notification restaure tout le lot.
 - **Voir le détail** : filtrer le bilan et les séances par dates, bornes incluses. Le quota d'absences du cours entier reste affiché séparément du bilan de la période.

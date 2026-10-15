@@ -21,8 +21,12 @@ const statusLabels = {
 };
 
 let state = loadState();
-// La nouvelle présentation est sombre par défaut ; le choix explicite reste mémorisé.
-state.dark = localStorage.getItem("presenceCours.theme") !== "light";
+// Appliquer une fois le thème clair de la nouvelle direction, puis conserver le choix.
+if (localStorage.getItem("presenceCours.appearance") !== "minimal-v1") {
+  localStorage.setItem("presenceCours.theme", "light");
+  localStorage.setItem("presenceCours.appearance", "minimal-v1");
+}
+state.dark = localStorage.getItem("presenceCours.theme") === "dark";
 let selectedQuarter = localStorage.getItem("presenceCours.quarter") === "Q2" ? "Q2" : "Q1";
 let editingId = null;
 let undoEntries = null;
@@ -30,6 +34,7 @@ let detailsCourseId = null;
 const historySelection = new Set();
 let visibleHistoryIds = [];
 let reportSort = { key: "name", direction: "asc" };
+let courseSort = null;
 function visibleCourses() { return state.courses.filter(c => Planning.quarterOf(c) === selectedQuarter); }
 function notify(message, previous = null) {
   undoEntries = previous;
@@ -237,10 +242,14 @@ function renderToday() {
 
 function renderCourses() {
   const grid = document.getElementById("coursesGrid");
-  const template = document.getElementById("courseCardTemplate");
+  const template = document.getElementById("courseRowTemplate");
   grid.innerHTML = "";
 
-  const courses = visibleCourses();
+  const available = visibleCourses();
+  const courses = courseSort ? Planning.sortReport(available.map(course => { const m = metrics(course); return { ...course, ...m, presenceRate: m.completed ? m.presenceRate : null }; }), courseSort.key, courseSort.direction) : available;
+  document.getElementById("coursesHeading").textContent = `Mes cours (${available.length})`;
+  document.getElementById("coursesCaption").textContent = `Cours du ${selectedQuarter}`;
+  document.querySelectorAll("[data-course-sort-header]").forEach(header => header.setAttribute("aria-sort", header.dataset.courseSortHeader === courseSort?.key ? (courseSort.direction === "asc" ? "ascending" : "descending") : "none"));
   courses.forEach(course => {
     const node = template.content.cloneNode(true);
     const m = metrics(course);
@@ -249,15 +258,17 @@ function renderCourses() {
     node.querySelector(".course-day").textContent = course.day || "Jours à définir";
     node.querySelector(".course-name").textContent = course.name;
     node.querySelector(".presence-rate").textContent = m.completed ? `${m.presenceRate}%` : "—";
-    node.querySelector(".progress-fill").style.width = `${m.completed ? Math.max(0, Math.min(100, m.presenceRate)) : 0}%`;
     node.querySelector(".absence-count").textContent = m.absent;
     node.querySelector(".absence-limit").textContent = m.limit;
     node.querySelector(".absence-left").textContent = m.left;
 
-    node.querySelector(".absence-description").textContent = `${m.absent} absence(s) injustifiée(s) sur ${m.limit} maximum`;
     node.querySelector(".quick-present").addEventListener("click", () => quickAttendance(course.id, "present"));
     node.querySelector(".quick-absent").addEventListener("click", () => quickAttendance(course.id, "absent"));
-    node.querySelectorAll("button").forEach(button => button.setAttribute("aria-label", `${button.textContent} : ${course.name}`));
+    node.querySelectorAll("button").forEach(button => {
+      const action = button.matches(".quick-present, .quick-absent") ? `${button.textContent} aujourd’hui` : "Voir le détail";
+      button.setAttribute("aria-label", `${action} : ${course.name}`);
+      button.title = `${action} : ${course.name}`;
+    });
     const badge = node.querySelector(".risk-badge");
     badge.textContent = label;
     badge.classList.add(cls);
@@ -678,6 +689,11 @@ document.getElementById("batchForm").addEventListener("submit", event => {
 });
 document.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
 document.getElementById("overviewBtn").addEventListener("click", () => { renderReport(); document.getElementById("overviewDialog").showModal(); });
+document.querySelectorAll("[data-course-sort]").forEach(button => button.addEventListener("click", () => {
+  const key = button.dataset.courseSort;
+  courseSort = { key, direction: courseSort?.key === key && courseSort.direction === "asc" ? "desc" : "asc" };
+  renderCourses();
+}));
 document.querySelectorAll("[data-sort]").forEach(button => button.addEventListener("click", () => {
   const key = button.dataset.sort;
   reportSort = { key, direction: key === reportSort.key && reportSort.direction === "asc" ? "desc" : "asc" }; renderReport();

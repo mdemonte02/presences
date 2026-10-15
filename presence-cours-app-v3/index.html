@@ -7,15 +7,15 @@
   <title>Présence Cours</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
-<body class="dark">
+<body>
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true">PC</span><div>
       <p class="eyebrow">IETC · Bac 2</p>
       <h1>Présence Cours</h1>
     </div></div>
-    <nav class="topbar-actions" aria-label="Navigation principale"><a href="#coursesHeading">Mes cours</a><a href="#historyHeading">Historique</a><button id="themeBtn" class="icon-btn" aria-label="Activer le thème clair">☀</button></nav>
+    <nav class="topbar-actions" aria-label="Navigation principale"><a href="#coursesHeading">Mes cours</a><a href="#historyHeading">Historique</a><button id="themeBtn" class="icon-btn" aria-label="Activer le thème sombre">☾</button></nav>
   </header>
 
   <a class="skip-link" href="#coursesGrid">Aller aux cours</a>
@@ -40,13 +40,6 @@
 
     <section class="summary-grid" id="summaryGrid"></section>
 
-    <section class="section-head">
-      <div>
-        <p class="eyebrow">Matières</p>
-        <h2 id="coursesHeading">Mes cours</h2>
-      </div>
-    </section>
-
     <div class="course-toolbar">
       <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
       <div class="courses-tools"><button id="overviewBtn" class="secondary">Tableau de bord</button><button id="exceptionsBtn" class="secondary">Changements ponctuels</button><button id="settingsBtn" class="secondary">Réglages de l’horaire</button></div>
@@ -55,7 +48,20 @@
       <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><div class="today-meta"><span id="todayDate" class="muted"></span><button id="missingBtn" class="secondary">Séances à vérifier</button></div></div>
       <div id="todayCourses"></div>
     </section>
-    <section id="coursesGrid" tabindex="-1" class="courses-grid"></section>
+    <section class="section-head"><h2 id="coursesHeading">Mes cours</h2></section>
+    <div class="table-wrap courses-table-wrap">
+      <table class="courses-table">
+        <caption class="visually-hidden" id="coursesCaption">Cours du quadrimestre sélectionné</caption>
+        <thead><tr>
+          <th scope="col" data-course-sort-header="name"><button data-course-sort="name">Cours</button></th>
+          <th scope="col" data-course-sort-header="presenceRate"><button data-course-sort="presenceRate">Présence</button></th>
+          <th scope="col" data-course-sort-header="absent"><button data-course-sort="absent">Absences / max.</button></th>
+          <th scope="col" data-course-sort-header="left"><button data-course-sort="left">Restantes</button></th>
+          <th scope="col">Statut</th><th scope="col">Actions</th>
+        </tr></thead>
+        <tbody id="coursesGrid" tabindex="-1"></tbody>
+      </table>
+    </div>
 
     <section class="section-head">
       <div>
@@ -266,31 +272,18 @@
 
   <section id="printReport" hidden aria-label="Bilan imprimable"></section>
 
-  <template id="courseCardTemplate">
-    <article class="course-card card">
-      <div class="course-card-top">
-        <div>
-          <p class="course-day"></p>
-          <h3 class="course-name"></h3>
-        </div>
-        <span class="risk-badge"></span>
-      </div>
-      <div class="metric-row">
-        <span>Présence sur les séances encodées</span>
-        <strong class="presence-rate"></strong>
-      </div>
-      <div class="progress"><div class="progress-fill"></div></div>
-      <div class="course-stats">
-        <div><span>Absences</span><strong class="absence-count"></strong></div>
-        <div><span>Maximum (40 %)</span><strong class="absence-limit"></strong></div>
-        <div><span>Absences restantes</span><strong class="absence-left"></strong></div>
-      </div>
-      <p class="absence-description"></p><div class="quick-actions"><button class="primary quick-present">Présent aujourd’hui</button><button class="secondary quick-absent">Absent aujourd’hui</button></div>
-      <button class="secondary full details-btn">Voir le détail</button>
-    </article>
+  <template id="courseRowTemplate">
+    <tr class="course-row">
+      <th scope="row"><span class="course-name"></span><span class="course-day"></span></th>
+      <td><span class="presence-rate"></span></td>
+      <td class="absence-fraction"><span class="absence-count"></span><span class="muted"> / <span class="absence-limit"></span></span></td>
+      <td><strong class="absence-left"></strong></td>
+      <td><span class="risk-badge"></span></td>
+      <td><div class="row-actions"><button class="secondary quick-present">Présent</button><button class="secondary quick-absent">Absent</button><button class="secondary details-btn">Détail</button></div></td>
+    </tr>
   </template>
 
-  <script src="planning.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="planning.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

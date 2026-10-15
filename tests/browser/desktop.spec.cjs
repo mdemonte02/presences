@@ -25,9 +25,9 @@ test('anciens enregistrements conservés, jours et quadrimestres modifiables', a
   await page.locator('#settingsBtn').click();
   await course(page, 'web').locator('[data-course-quarter]').selectOption('Q2');
   await saveSettings(page);
-  await expect(page.locator('#coursesGrid .course-card')).toHaveCount(4);
+  await expect(page.locator('#coursesGrid .course-row')).toHaveCount(4);
   await page.locator('[data-quarter="Q2"]').click();
-  await expect(page.locator('#coursesGrid .course-card')).toHaveCount(5);
+  await expect(page.locator('#coursesGrid .course-row')).toHaveCount(5);
   await expect(page.locator('.today-course')).toHaveCount(2);
 });
 test('dates, congés et annulation des réglages', async ({ page }) => {
@@ -173,19 +173,53 @@ test('un calendrier local endommagé ne supprime pas les présences existantes',
   await expect(page.locator('#historyList .history-item')).toHaveCount(1);
 });
 
-test('présentation sombre par défaut et choix du thème mémorisé sans perte de séances', async ({ page }) => {
-  await expect(page.locator('body')).toHaveClass('dark');
-  await expect(page.locator('#themeBtn')).toHaveAccessibleName('Activer le thème clair');
+test('présentation claire par défaut et choix du thème mémorisé sans perte de séances', async ({ page }) => {
+  await expect(page.locator('body')).not.toHaveClass('dark');
+  await expect(page.locator('#themeBtn')).toHaveAccessibleName('Activer le thème sombre');
   await page.locator('#coursesGrid .quick-present').first().click();
   const entries = (await readState(page)).entries;
   await page.locator('#themeBtn').click();
-  await expect(page.locator('body')).not.toHaveClass('dark');
+  await expect(page.locator('body')).toHaveClass('dark');
   await page.reload();
-  await expect(page.locator('body')).not.toHaveClass('dark');
+  await expect(page.locator('body')).toHaveClass('dark');
   expect((await readState(page)).entries).toEqual(entries);
   await page.locator('#themeBtn').click();
   await page.reload();
-  await expect(page.locator('body')).toHaveClass('dark');
+  await expect(page.locator('body')).not.toHaveClass('dark');
   await expect(page.locator('#historyList .history-item')).toHaveCount(1);
   await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();
+});
+test('tableau compact : tri des cours, encodage du jour et accès au détail', async ({ page }) => {
+  await expect(page.locator('.courses-table')).toBeVisible();
+  await expect(page.locator('#coursesGrid tr')).toHaveCount(5);
+  await page.locator('[data-course-sort="name"]').click();
+  await expect(page.locator('#coursesGrid .course-name').first()).toContainText('Mathématique');
+  await expect(page.locator('[data-course-sort-header="name"]')).toHaveAttribute('aria-sort','ascending');
+  await page.locator('[data-course-sort="name"]').click();
+  await expect(page.locator('#coursesGrid .course-name').first()).toContainText("Système d'exploitation");
+  await page.locator('#coursesGrid .quick-absent').first().click();
+  await page.locator('[data-course-sort="absent"]').click();
+  await page.locator('[data-course-sort="absent"]').click();
+  await expect(page.locator('#coursesGrid .course-name').first()).toContainText("Système d'exploitation");
+  await expect(page.locator('#coursesGrid .absence-count').first()).toHaveText('1');
+  await expect(page.locator('#coursesGrid .absence-left').first()).toHaveText('9');
+  await page.locator('[data-course-sort="presenceRate"]').click();
+  await expect(page.locator('#coursesGrid .presence-rate').first()).toHaveText('0%');
+  await page.locator('#coursesGrid .details-btn').first().click();
+  await expect(page.locator('#detailsTitle')).toHaveText("Système d'exploitation");
+  await page.locator('#closeDetailsBtn').click();
+  await page.locator('[data-quarter="Q2"]').click();
+  await expect(page.locator('#coursesGrid tr')).toHaveCount(4);
+  await expect(page.locator('#coursesCaption')).toHaveText('Cours du Q2');
+});
+test('migration du thème précédent : présentation claire et historique conservé', async ({ page }) => {
+  await page.locator('#coursesGrid .quick-present').first().click();
+  const entries=(await readState(page)).entries;
+  await page.evaluate(()=>{
+    localStorage.setItem('presenceCours.theme','dark');
+    localStorage.removeItem('presenceCours.appearance');
+  });
+  await page.reload();
+  await expect(page.locator('body')).not.toHaveClass('dark');
+  expect((await readState(page)).entries).toEqual(entries);
 });
