@@ -140,25 +140,39 @@ function renderCourses() {
   const template = document.getElementById("courseCardTemplate");
   grid.innerHTML = "";
 
-  state.courses.forEach(course => {
-    const node = template.content.cloneNode(true);
-    const m = metrics(course);
-    const [label, cls] = riskLabel(m);
+  const q1Ids = new Set(["web", "os2", "ebusiness", "computers", "math"]);
+  const quarters = [
+    { label: "Q1", courses: state.courses.filter(course => q1Ids.has(course.id)) },
+    { label: "Q2", courses: state.courses.filter(course => !q1Ids.has(course.id)) }
+  ];
 
-    node.querySelector(".course-day").textContent = course.day;
-    node.querySelector(".course-name").textContent = course.name;
-    node.querySelector(".presence-rate").textContent = `${m.presenceRate}%`;
-    node.querySelector(".progress-fill").style.width = `${Math.max(0, Math.min(100, m.presenceRate))}%`;
-    node.querySelector(".absence-count").textContent = m.absent;
-    node.querySelector(".absence-limit").textContent = m.limit;
-    node.querySelector(".absence-left").textContent = m.left;
+  quarters.forEach(({ label, courses }) => {
+    if (!courses.length) return;
+    const heading = document.createElement("h3");
+    heading.className = "quarter-heading";
+    heading.textContent = label;
+    grid.appendChild(heading);
 
-    const badge = node.querySelector(".risk-badge");
-    badge.textContent = label;
-    badge.classList.add(cls);
+    courses.forEach(course => {
+      const node = template.content.cloneNode(true);
+      const m = metrics(course);
+      const [label, cls] = riskLabel(m);
 
-    node.querySelector(".details-btn").addEventListener("click", () => showDetails(course.id));
-    grid.appendChild(node);
+      node.querySelector(".course-day").textContent = course.day;
+      node.querySelector(".course-name").textContent = course.name;
+      node.querySelector(".presence-rate").textContent = `${m.presenceRate}%`;
+      node.querySelector(".progress-fill").style.width = `${Math.max(0, Math.min(100, m.presenceRate))}%`;
+      node.querySelector(".absence-count").textContent = m.absent;
+      node.querySelector(".absence-limit").textContent = m.limit;
+      node.querySelector(".absence-left").textContent = m.left;
+
+      const badge = node.querySelector(".risk-badge");
+      badge.textContent = label;
+      badge.classList.add(cls);
+
+      node.querySelector(".details-btn").addEventListener("click", () => showDetails(course.id));
+      grid.appendChild(node);
+    });
   });
 }
 
