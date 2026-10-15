@@ -1,4 +1,4 @@
-const CACHE = "presence-cours-v17";
+const CACHE = "presence-cours-v18";
 const ASSETS = ["./", "./index.html", "./styles.css?v=17", "./app.js?v=17", "./planning.js?v=17", "./manifest.webmanifest", "./icon.svg?v=17", "./logo.svg?v=17", "./ui-icons.svg?v=17", "./horaire-bac2-2026-2027.pdf"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
