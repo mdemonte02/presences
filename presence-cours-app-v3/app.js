@@ -952,21 +952,17 @@ setInterval(refreshDay, 60_000);
 const brand = document.querySelector(".brand");
 const brandMark = brand.querySelector(".brand-mark");
 const logoWatcher = brand.querySelector(".logo-watcher");
-const logoMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 let logoAnimation;
 function playLogoAnimation() {
   logoAnimation?.cancel();
-  const reduced = logoMotionPreference.matches;
-  logoAnimation = logoWatcher.animate(reduced ? [
-    { opacity: 1 }, { opacity: .45 }, { opacity: 1 }
-  ] : [
+  // Animation du logo explicitement demandée, y compris en mode de mouvement réduit.
+  logoAnimation = logoWatcher.animate([
     { transform: "scale(1)", offset: 0 },
     { transform: "scale(1.34, 1.28)", offset: .35 },
     { transform: "scale(1.34, 1.28)", offset: .7 },
     { transform: "scale(1)", offset: 1 }
-  ], { duration: reduced ? 600 : 2000, easing: "ease-in-out", iterations: 1 });
+  ], { duration: 2000, easing: "ease-in-out", iterations: 1 });
 }
 brand.addEventListener("pointerenter", playLogoAnimation);
 brandMark.addEventListener("focus", playLogoAnimation);
 brandMark.addEventListener("click", playLogoAnimation);
-logoMotionPreference.addEventListener("change", () => logoAnimation?.cancel());

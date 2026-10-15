@@ -22,6 +22,9 @@ test('logo : survol du nom, clic, clavier et préférence de mouvement', async (
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await logo.click();
   const reducedFrames = await frames();
-  expect(reducedFrames.some(frame => frame.transform)).toBe(false);
-  expect(reducedFrames.some(frame => Number(frame.opacity) === .45)).toBe(true);
+  expect(reducedFrames.some(frame => frame.transform?.includes('1.34'))).toBe(true);
+  expect(await page.locator('.logo-person').boundingBox()).toEqual(personBefore);
+  await page.locator('.hero h2').hover();
+  await page.locator('h1').hover();
+  expect((await frames()).some(frame => frame.transform?.includes('1.34'))).toBe(true);
 });
