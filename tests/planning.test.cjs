@@ -123,3 +123,9 @@ test('CSV Excel : BOM, séparateur, guillemets, retours à la ligne et formules 
   assert(csv.includes('"Éléments; statistiques";"Texte ""cité""\nseconde ligne";"2"'));
   assert(csv.includes('"\'=CMD()";"\'  +SUM(A1:A2)";"0"'));
 });
+test('semaine du lundi au vendredi : dimanche, changement d’année et heure d’été', () => {
+  assert.deepEqual(P.weekDates('2027-01-03'), ['2026-12-28','2026-12-29','2026-12-30','2026-12-31','2027-01-01']);
+  assert.deepEqual(P.weekDates('2026-03-29'), ['2026-03-23','2026-03-24','2026-03-25','2026-03-26','2026-03-27']);
+  assert.equal(P.weekDates('2026-10-15')[3], '2026-10-15');
+  assert.throws(() => P.weekDates('2026-02-30'));
+});

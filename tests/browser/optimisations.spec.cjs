@@ -1,4 +1,4 @@
-const { clickTool } = require('./helpers.cjs');
+const { clickTool, settingsTab } = require('./helpers.cjs');
 const {test,expect}=require('@playwright/test');
 const fs=require('node:fs/promises');
 const readState=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('presenceCours.v1')));

@@ -1,4 +1,4 @@
-const { clickTool } = require('./helpers.cjs');
+const { clickTool, settingsTab } = require('./helpers.cjs');
 const { test, expect } = require('@playwright/test');
 const fs = require('node:fs/promises');
 const readState = page => page.evaluate(() => JSON.parse(localStorage.getItem('presenceCours.v1')));
@@ -33,14 +33,20 @@ test('anciens enregistrements conservés, jours et quadrimestres modifiables', a
 });
 test('dates, congés et annulation des réglages', async ({ page }) => {
   await clickTool(page, 'settingsBtn');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q1Start').fill('2026-09-01');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q1End').fill('2027-01-31');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q2Start').fill('2027-01-01');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q2End').fill('2027-06-30');
   await saveSettings(page);
   await expect(page.locator('#settingsError')).toContainText('chevaucher');
   expect((await readState(page))?.calendar?.quarters.Q1.start ?? '').toBe('');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q2Start').fill('2027-02-01');
+  await settingsTab(page, 'holidays');
   await page.locator('#addHolidayBtn').click();
   await page.locator('[data-holiday-label]').fill('Congé personnel');
   await page.locator('[data-holiday-start]').fill('2026-10-15');
@@ -50,11 +56,13 @@ test('dates, congés et annulation des réglages', async ({ page }) => {
   await page.reload();
   await expect(page.locator('.today-course')).toHaveCount(0);
   await clickTool(page, 'settingsBtn');
+  await settingsTab(page, 'holidays');
   await page.locator('.holiday-row button').click();
   await page.locator('#cancelCourseBtn').click();
   await expect(page.locator('.today-course')).toHaveCount(0);
   await clickTool(page, 'settingsBtn');
   await expect(page.locator('.holiday-row')).toHaveCount(1);
+  await settingsTab(page, 'holidays');
   await page.locator('.holiday-row button').click();
   await saveSettings(page);
   await expect(page.locator('.today-course')).toHaveCount(1);
@@ -114,7 +122,9 @@ test('bilan par période : quatre statuts, justifiés présents, quota global di
 });
 test('export/import du calendrier, anciennes sauvegardes et import invalide', async ({ page }, testInfo) => {
   await clickTool(page, 'settingsBtn');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q1Start').fill('2026-09-01');
+  await settingsTab(page, 'quarters');
   await page.locator('#Q1End').fill('2027-01-31');
   await saveSettings(page);
   const downloadPromise = page.waitForEvent('download');

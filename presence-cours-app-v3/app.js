@@ -35,8 +35,9 @@ const historySelection = new Set();
 let visibleHistoryIds = [];
 let reportSort = { key: "name", direction: "asc" };
 let courseSort = null;
+let weekOffset = 0;
 function iconMarkup(name) {
-  return `<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=16#${name}"/></svg>`;
+  return `<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=17#${name}"/></svg>`;
 }
 function decorateButtons(root = document) {
   root.querySelectorAll("button[data-icon]").forEach(button => {
@@ -183,7 +184,9 @@ function render() {
   if (document.getElementById("overviewDialog").open) renderReport();
   if (document.getElementById("missingDialog").open) renderMissing();
   populateCourseSelect();
+  if (document.getElementById("weekDialog").open) renderWeek();
   decorateButtons();
+  scheduleNavigation();
 }
 
 function renderSummary() {
@@ -274,10 +277,25 @@ function renderCourses() {
     node.querySelector(".absence-limit").textContent = m.limit;
     node.querySelector(".absence-left").textContent = m.left;
 
-    node.querySelector(".quick-present").addEventListener("click", () => quickAttendance(course.id, "present"));
-    node.querySelector(".quick-absent").addEventListener("click", () => quickAttendance(course.id, "absent"));
+    const todayEntry = state.entries.find(e => e.courseId === course.id && e.date === todayIso());
+    const row = node.querySelector(".course-row");
+    row.dataset.courseRow = course.id;
+    if (todayEntry) {
+      const status = node.querySelector(".row-today-status");
+      status.hidden = false;
+      status.className += ` status-${todayEntry.status}`;
+      status.textContent = `${statusLabels[todayEntry.status]} aujourd’hui`;
+      node.querySelector(".quick-present").remove(); node.querySelector(".quick-absent").remove();
+      const edit = document.createElement("button"); edit.className = "secondary today-edit"; edit.dataset.icon = "edit";
+      edit.textContent = "Modifier";
+      edit.addEventListener("click", () => openAttendance(todayEntry));
+      node.querySelector(".row-actions").prepend(edit);
+    } else {
+      node.querySelector(".quick-present").addEventListener("click", () => quickAttendance(course.id, "present"));
+      node.querySelector(".quick-absent").addEventListener("click", () => quickAttendance(course.id, "absent"));
+    }
     node.querySelectorAll("button").forEach(button => {
-      const action = button.matches(".quick-present, .quick-absent") ? `${button.textContent} aujourd’hui` : "Voir le détail";
+      const action = button.matches(".quick-present, .quick-absent") ? `${button.textContent} aujourd’hui` : button.matches(".today-edit") ? "Modifier la séance d’aujourd’hui" : "Voir le détail";
       button.setAttribute("aria-label", `${action} : ${course.name}`);
       button.title = `${action} : ${course.name}`;
     });
@@ -305,7 +323,7 @@ function renderHistory() {
   if (!entries.length) {
     list.innerHTML = state.entries.length
       ? '<div class="empty"><p>Aucune séance pour ces filtres.</p></div>'
-      : '<div class="empty empty-history"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="logo.svg?v=16#presence"/></svg><p>Aucune séance pour le moment</p></div>';
+      : '<div class="empty empty-history"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="logo.svg?v=17#presence"/></svg><p>Aucune séance pour le moment</p></div>';
     return;
   }
 
@@ -411,7 +429,66 @@ function openCourseSettings() {
   const holidays = document.getElementById("holidayList");
   holidays.replaceChildren(...state.calendar.holidays.map(holidayRow));
   document.getElementById("settingsError").textContent = "";
+  const picker = document.getElementById("settingsCoursePicker");
+  picker.innerHTML = state.courses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+  showCourseSettings();
+  activateSettingsTab("courses");
   document.getElementById("courseDialog").showModal();
+}
+
+function activateSettingsTab(key, focus = false) {
+  document.querySelectorAll("[data-settings-tab]").forEach(tab => {
+    const selected = tab.dataset.settingsTab === key;
+    tab.setAttribute("aria-selected", String(selected)); tab.tabIndex = selected ? 0 : -1;
+    document.getElementById(`settings-${tab.dataset.settingsTab}`).hidden = !selected;
+    if (selected && focus) tab.focus();
+  });
+}
+function showCourseSettings() {
+  const value = document.getElementById("settingsCoursePicker").value;
+  document.querySelectorAll("[data-course]").forEach(row => { row.hidden = row.dataset.course !== value; });
+}
+function revealSettingsInput(input) {
+  const panel = input.closest('[role="tabpanel"]');
+  if (panel) activateSettingsTab(panel.id.replace("settings-", ""));
+  const course = input.closest("[data-course]");
+  if (course) { document.getElementById("settingsCoursePicker").value = course.dataset.course; showCourseSettings(); }
+}
+function renderWeek() {
+  const anchor = new Date(todayIso() + "T12:00:00Z"); anchor.setUTCDate(anchor.getUTCDate() + weekOffset * 7);
+  const dates = Planning.weekDates(anchor.toISOString().slice(0,10));
+  document.getElementById("weekTitle").textContent = `Aperçu de la semaine · ${selectedQuarter}`;
+  document.getElementById("weekRange").textContent = `${formatDate(dates[0])} – ${formatDate(dates[4])}`;
+  const grid = document.getElementById("weekDays"); grid.replaceChildren();
+  for (const date of dates) {
+    const column = document.createElement("section"); column.className = "week-day";
+    if (date === todayIso()) column.classList.add("is-today");
+    const heading = document.createElement("h3");
+    const time = document.createElement("time"); time.dateTime = date;
+    time.textContent = new Intl.DateTimeFormat("fr-BE", {weekday:"long",day:"numeric",month:"short"}).format(new Date(date + "T12:00:00Z"));
+    heading.appendChild(time); column.appendChild(heading);
+    const courses = Planning.scheduledCourses(state.courses, state.calendar, selectedQuarter, date);
+    for (const course of courses) {
+      const card = document.createElement("article"); card.className = "week-course";
+      const name = document.createElement("h4"); name.textContent = course.name; card.appendChild(name);
+      const entry = state.entries.find(e => e.courseId === course.id && e.date === date);
+      const status = document.createElement("p"); status.className = entry ? `status-pill status-${entry.status}` : "muted";
+      status.textContent = entry ? statusLabels[entry.status] : date > todayIso() ? "À venir" : "À encoder"; card.appendChild(status);
+      const moved = (state.calendar.exceptions ?? []).find(e => e.courseId === course.id && e.action === "move" && e.targetDate === date);
+      if (moved) { const note = document.createElement("p"); note.className = "week-note"; note.textContent = `Déplacé du ${formatDate(moved.date)}`; card.appendChild(note); }
+      column.appendChild(card);
+    }
+    for (const change of state.calendar.exceptions ?? []) {
+      const course = state.courses.find(c => c.id === change.courseId);
+      if (change.date !== date || Planning.quarterOf(course) !== selectedQuarter) continue;
+      const card = document.createElement("article"); card.className = "week-course week-changed";
+      const name = document.createElement("h4"); name.textContent = course.name;
+      const note = document.createElement("p"); note.textContent = change.action === "cancel" ? "Annulé au planning" : `Déplacé au ${formatDate(change.targetDate)}`;
+      card.append(name,note); column.appendChild(card);
+    }
+    if (column.children.length === 1) { const empty = document.createElement("p"); empty.className="muted"; empty.textContent="Aucun cours prévu"; column.appendChild(empty); }
+    grid.appendChild(column);
+  }
 }
 
 function renderBatch() {
@@ -575,11 +652,15 @@ document.getElementById("cancelCourseBtn").addEventListener("click", () => docum
 
 document.getElementById("courseForm").addEventListener("submit", (ev) => {
   ev.preventDefault();
+  const invalid = [...ev.currentTarget.elements].find(input => input.willValidate && !input.checkValidity());
+  if (invalid) { revealSettingsInput(invalid); invalid.reportValidity(); return; }
   const calendar = { quarters: {}, holidays: [], exceptions: structuredClone(state.calendar.exceptions ?? []) };
   for (const key of ["Q1", "Q2"]) calendar.quarters[key] = { start: document.getElementById(`${key}Start`).value, end: document.getElementById(`${key}End`).value };
   calendar.holidays = [...document.querySelectorAll(".holiday-row")].map(row => ({ label: row.querySelector("[data-holiday-label]").value.trim(), start: row.querySelector("[data-holiday-start]").value, end: row.querySelector("[data-holiday-end]").value }));
+  try { Planning.validateCalendar({ ...calendar, holidays: [] }); }
+  catch (error) { activateSettingsTab("quarters"); document.getElementById("settingsError").textContent = error.message; return; }
   try { Planning.validateCalendar(calendar); }
-  catch (error) { document.getElementById("settingsError").textContent = error.message; return; }
+  catch (error) { activateSettingsTab("holidays"); document.getElementById("settingsError").textContent = error.message; return; }
   const courses = state.courses.map(course => {
     const row = [...document.querySelectorAll("[data-course]")].find(row => row.dataset.course === course.id);
     return { ...course, quarter: row.querySelector("[data-course-quarter]").value, totalDays: Number(row.querySelector("[data-course-days]").value), day: [...row.querySelectorAll("[data-weekday]:checked")].map(input => input.value).join(" / ") };
@@ -797,6 +878,34 @@ document.getElementById("bulkEditForm").addEventListener("submit", event => {
   state.entries = next; historySelection.clear(); saveState(); render();
   document.getElementById("bulkEditDialog").close(); notify("Séances corrigées.", previous);
 });
+document.querySelectorAll("[data-settings-tab]").forEach(tab => {
+  tab.addEventListener("click", () => activateSettingsTab(tab.dataset.settingsTab));
+  tab.addEventListener("keydown", event => {
+    const tabs = [...document.querySelectorAll("[data-settings-tab]")]; const index = tabs.indexOf(tab);
+    const target = event.key === "ArrowRight" ? (index+1)%tabs.length : event.key === "ArrowLeft" ? (index+tabs.length-1)%tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length-1 : null;
+    if (target !== null) { event.preventDefault(); activateSettingsTab(tabs[target].dataset.settingsTab, true); }
+  });
+});
+document.getElementById("settingsCoursePicker").addEventListener("change", showCourseSettings);
+document.getElementById("weekBtn").addEventListener("click", () => { weekOffset=0; renderWeek(); document.getElementById("weekDialog").showModal(); });
+document.getElementById("weekPrevious").addEventListener("click", () => { weekOffset--; renderWeek(); });
+document.getElementById("weekNext").addEventListener("click", () => { weekOffset++; renderWeek(); });
+document.getElementById("weekCurrent").addEventListener("click", () => { weekOffset=0; renderWeek(); });
+let navFrame = null;
+function updateNavigation() {
+  const history = document.getElementById("historyHeading");
+  const bottom = window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+  const active = history.getBoundingClientRect().top <= window.innerHeight * .5 || bottom ? "#historyHeading" : "#coursesHeading";
+  document.querySelectorAll('.topbar-actions a[href^="#"]').forEach(link => {
+    if (link.getAttribute("href") === active) link.setAttribute("aria-current", "location"); else link.removeAttribute("aria-current");
+  });
+  document.getElementById("backToTop").hidden = window.scrollY < 200;
+  navFrame = null;
+}
+function scheduleNavigation() { if (navFrame === null) navFrame = requestAnimationFrame(updateNavigation); }
+window.addEventListener("scroll", scheduleNavigation, { passive: true });
+window.addEventListener("resize", scheduleNavigation);
+updateNavigation();
 const toolsMenu = document.getElementById("toolsMenu");
 const toolsTrigger = toolsMenu.querySelector("summary");
 toolsMenu.addEventListener("click", event => {
@@ -818,7 +927,7 @@ toolsMenu.addEventListener("keydown", event => {
 });
 toolsMenu.addEventListener("focusout", event => { if (event.relatedTarget && !toolsMenu.contains(event.relatedTarget)) toolsMenu.open = false; });
 document.addEventListener("pointerdown", event => { if (!toolsMenu.contains(event.target)) toolsMenu.open = false; });
-const buttonIcons = { addAttendanceBtn: "plus", batchBtn: "batch", scheduleBtn: "calendar", exportBtn: "download", importBtn: "upload", overviewBtn: "chart", exceptionsBtn: "changes", settingsBtn: "settings", missingBtn: "clock", resetFilters: "reset", bulkEditBtn: "edit", csvSummaryBtn: "download", csvHistoryBtn: "list", printReportBtn: "print", resetPeriod: "reset", addHolidayBtn: "plus" };
+const buttonIcons = { addAttendanceBtn: "plus", batchBtn: "batch", scheduleBtn: "calendar", exportBtn: "download", importBtn: "upload", overviewBtn: "chart", exceptionsBtn: "changes", settingsBtn: "settings", missingBtn: "clock", resetFilters: "reset", bulkEditBtn: "edit", csvSummaryBtn: "download", csvHistoryBtn: "list", printReportBtn: "print", resetPeriod: "reset", addHolidayBtn: "plus", weekBtn: "calendar" };
 for (const [id, name] of Object.entries(buttonIcons)) document.getElementById(id).dataset.icon = name;
 document.querySelectorAll(".icon-btn:not(#themeBtn), #dismissNotice").forEach(button => { button.innerHTML = iconMarkup("close"); });
 if ("serviceWorker" in navigator) {

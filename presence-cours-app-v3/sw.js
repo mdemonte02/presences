@@ -1,5 +1,5 @@
-const CACHE = "presence-cours-v16";
-const ASSETS = ["./", "./index.html", "./styles.css?v=16", "./app.js?v=16", "./planning.js?v=16", "./manifest.webmanifest", "./icon.svg?v=16", "./logo.svg?v=16", "./ui-icons.svg?v=16", "./horaire-bac2-2026-2027.pdf"];
+const CACHE = "presence-cours-v17";
+const ASSETS = ["./", "./index.html", "./styles.css?v=17", "./app.js?v=17", "./planning.js?v=17", "./manifest.webmanifest", "./icon.svg?v=17", "./logo.svg?v=17", "./ui-icons.svg?v=17", "./horaire-bac2-2026-2027.pdf"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

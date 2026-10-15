@@ -108,6 +108,15 @@
       return '"' + text.replace(/"/g, '""') + '"';
     }).join(";")).join("\r\n");
   }
+  function weekDates(anchor) {
+    if (!validDate(anchor)) throw new Error("Date de semaine invalide.");
+    const monday = new Date(anchor + "T12:00:00Z");
+    monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
+    return Array.from({ length: 5 }, (_, index) => {
+      const date = new Date(monday); date.setUTCDate(date.getUTCDate() + index);
+      return date.toISOString().slice(0, 10);
+    });
+  }
   function inPeriod(entries, start = "", end = "") {
     return entries.filter(entry => (!start || entry.date >= start) && (!end || entry.date <= end));
   }
@@ -130,7 +139,7 @@
     });
     return [...entries.filter(entry => entry.date !== date || !ids.has(entry.courseId)), ...replacements];
   }
-  const api = { DAYS, quarterOf, emptyCalendar, validDate, validateCalendar, scheduledCourses, inPeriod, statistics, applyBatch, validateExceptions, missingSessions, updateEntries, courseReport, sortReport, toCsv };
+  const api = { DAYS, quarterOf, emptyCalendar, validDate, validateCalendar, scheduledCourses, inPeriod, statistics, applyBatch, validateExceptions, missingSessions, updateEntries, courseReport, sortReport, toCsv, weekDates };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.PresencePlanning = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

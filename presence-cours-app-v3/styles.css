@@ -253,6 +253,30 @@ legend { margin-bottom: 8px; }
 .schedule-link { display: inline-flex; align-items: center; text-decoration: none; }
 .schedule-frame-wrap { flex: 1; min-height: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); }
 .schedule-frame-wrap iframe { width: 100%; height: 100%; border: 0; background: white; }
+.row-today-status { width: fit-content; font-size: .69rem; border-radius: 4px; padding: 3px 6px; margin-bottom: 5px; }
+.topbar-actions a[aria-current="location"] { color: var(--text); text-decoration: underline; text-underline-offset: 7px; text-decoration-thickness: 2px; }
+.back-to-top { position: fixed; right: 22px; bottom: 22px; z-index: 8; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--accent); }
+body:has(#notice:not([hidden])) .back-to-top { bottom: 88px; }
+.back-to-top:hover { background: var(--surface-2); }
+#pageTop:focus { outline: none; }
+.settings-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.settings-tabs button { background: transparent; color: var(--muted); border-radius: 0; border-bottom: 2px solid transparent; padding: 10px 16px; }
+.settings-tabs button[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--accent); }
+#courseDialog { max-width: min(94vw, 800px); }
+#courseForm .course-setting { margin-bottom: 0; }
+#courseForm .dialog-actions { padding-top: 16px; border-top: 1px solid var(--divider); }
+#weekDialog { max-width: min(96vw, 1240px); }
+.week-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.week-controls p { color: var(--muted); font-size: .85rem; margin: 0; }
+.week-days { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); min-width: 790px; gap: 10px; }
+.week-day { min-width: 0; border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+.week-day.is-today { border-color: var(--accent); }
+.week-day h3 { font-size: .8rem; margin: 0 0 14px; text-transform: capitalize; }
+.week-course { border-top: 1px solid var(--divider); padding-top: 12px; margin-top: 12px; }
+.week-course h4 { font-size: .82rem; line-height: 1.5; margin: 0 0 8px; font-weight: 550; overflow-wrap: anywhere; }
+.week-course p { font-size: .72rem; margin: 4px 0 0; }
+.week-note, .week-changed { color: var(--muted); }
+.week-changed h4 { text-decoration: line-through; }
 @media (max-width: 1100px) {
   .hero { align-items: flex-start; }
   .hero-actions { max-width: 410px; flex-shrink: 1; }
@@ -261,7 +285,8 @@ legend { margin-bottom: 8px; }
 @media (max-width: 700px) {
   .topbar, .container { padding-left: 18px; padding-right: 18px; }
   .topbar-actions { gap: 12px; }
-  .topbar-actions a { display: none; }
+  .topbar { flex-wrap: wrap; }
+  .topbar-actions a { display: inline-block; }
   .hero { flex-direction: column; gap: 20px; }
   .hero-actions { align-items: flex-start; }
 

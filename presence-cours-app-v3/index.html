@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#111827" />
   <title>Watchling</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg?v=16" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="icon" href="icon.svg?v=17" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 96 96" focusable="false"><use href="logo.svg?v=16#presence"/></svg></span><div>
+  <header class="topbar" id="pageTop" tabindex="-1">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 96 96" focusable="false"><use href="logo.svg?v=17#presence"/></svg></span><div>
       <p class="eyebrow">IETC · Bac 2</p>
       <h1>Watchling</h1>
     </div></div>
@@ -28,7 +28,7 @@
       <div class="hero-actions">
         <button id="addAttendanceBtn" class="primary">Encoder une séance</button>
         <details id="toolsMenu" class="tools-menu">
-          <summary aria-controls="toolsPanel"><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=16#settings"/></svg>Outils<svg class="ui-icon menu-chevron" aria-hidden="true"><use href="ui-icons.svg?v=16#chevron"/></svg></summary>
+          <summary aria-controls="toolsPanel"><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=17#settings"/></svg>Outils<svg class="ui-icon menu-chevron" aria-hidden="true"><use href="ui-icons.svg?v=17#chevron"/></svg></summary>
           <nav id="toolsPanel" class="tools-panel" aria-label="Outils Watchling">
             <div class="tools-group"><h3>Encodage</h3><button id="batchBtn" type="button">Encoder une journée</button></div>
             <div class="tools-group"><h3>Planning</h3><button id="scheduleBtn" type="button">Consulter l’horaire</button><button id="exceptionsBtn" type="button">Changements ponctuels</button><button id="settingsBtn" type="button">Réglages de l’horaire</button></div>
@@ -46,7 +46,7 @@
       <div class="courses-tools"><button id="overviewBtn" class="text-button">Tableau de bord</button></div>
     </div>
     <section class="today-panel card" aria-labelledby="todayTitle">
-      <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><div class="today-meta"><span id="todayDate" class="muted"></span><button id="missingBtn" class="secondary">Séances à vérifier</button></div></div>
+      <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><div class="today-meta"><span id="todayDate" class="muted"></span><button id="weekBtn" class="text-button">Cette semaine</button><button id="missingBtn" class="secondary">Séances à vérifier</button></div></div>
       <div id="todayCourses"></div>
     </section>
     <section class="section-head"><h2 id="coursesHeading">Mes cours</h2></section>
@@ -81,6 +81,7 @@
     </div>
   <div id="notice" class="notice" hidden><span id="noticeText" role="status"></span><button id="undoBtn" class="secondary">Annuler</button><button id="dismissNotice" class="secondary" aria-label="Fermer la notification">×</button></div>
   </main>
+  <a id="backToTop" class="back-to-top" href="#pageTop" aria-label="Revenir en haut" hidden><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=17#up"/></svg></a>
 
   <dialog id="attendanceDialog" aria-labelledby="attendanceTitle">
     <form method="dialog" id="attendanceForm" class="dialog-card">
@@ -137,24 +138,34 @@
   </dialog>
 
   <dialog id="courseDialog" aria-labelledby="settingsTitle">
-    <form method="dialog" id="courseForm" class="dialog-card">
+    <form method="dialog" id="courseForm" class="dialog-card" novalidate>
       <div class="dialog-head">
         <div>
           <p class="eyebrow">Réglages</p>
-          <h2>Réglages de l’horaire</h2>
+          <h2 id="settingsTitle">Réglages de l’horaire</h2>
         </div>
         <button type="button" class="icon-btn" id="closeCourseBtn" aria-label="Fermer" onclick="document.getElementById('courseDialog').close()">×</button>
       </div>
-      <h3>Quadrimestres</h3>
-      <p class="muted">Laissez les dates vides si elles ne sont pas encore connues. Elles limitent les cours proposés dans « Aujourd’hui ».</p>
-      <div class="quarter-dates">
-        <fieldset><legend>Q1</legend><label>Début<input id="Q1Start" type="date"></label><label>Fin<input id="Q1End" type="date"></label></fieldset>
-        <fieldset><legend>Q2</legend><label>Début<input id="Q2Start" type="date"></label><label>Fin<input id="Q2End" type="date"></label></fieldset>
+      <div class="settings-tabs" role="tablist" aria-label="Catégories des réglages">
+        <button type="button" role="tab" id="settings-tab-courses" aria-controls="settings-courses" aria-selected="true" data-settings-tab="courses">Cours</button>
+        <button type="button" role="tab" id="settings-tab-quarters" aria-controls="settings-quarters" aria-selected="false" tabindex="-1" data-settings-tab="quarters">Quadrimestres</button>
+        <button type="button" role="tab" id="settings-tab-holidays" aria-controls="settings-holidays" aria-selected="false" tabindex="-1" data-settings-tab="holidays">Congés</button>
       </div>
-      <h3>Congés et jours sans cours</h3>
-      <div id="holidayList"></div><button id="addHolidayBtn" class="secondary" type="button">Ajouter un congé</button>
-      <h3>Cours</h3><p class="muted">Le nombre de séances prévues sert à calculer le quota d’absences. Il reste modifiable indépendamment des dates.</p>
-      <div id="courseSettingsList" class="settings-list"></div>
+      <section role="tabpanel" id="settings-courses" aria-labelledby="settings-tab-courses">
+        <label>Cours à modifier<select id="settingsCoursePicker"></select></label>
+        <p class="muted">Le nombre de séances prévues sert à calculer le quota d’absences.</p>
+        <div id="courseSettingsList" class="settings-list"></div>
+      </section>
+      <section role="tabpanel" id="settings-quarters" aria-labelledby="settings-tab-quarters" hidden>
+        <p class="muted">Laissez les dates vides si elles ne sont pas encore connues.</p>
+        <div class="quarter-dates">
+          <fieldset><legend>Q1</legend><label>Début<input id="Q1Start" type="date"></label><label>Fin<input id="Q1End" type="date"></label></fieldset>
+          <fieldset><legend>Q2</legend><label>Début<input id="Q2Start" type="date"></label><label>Fin<input id="Q2End" type="date"></label></fieldset>
+        </div>
+      </section>
+      <section role="tabpanel" id="settings-holidays" aria-labelledby="settings-tab-holidays" hidden>
+        <div id="holidayList"></div><button id="addHolidayBtn" class="secondary" type="button">Ajouter un congé</button>
+      </section>
       <p id="settingsError" class="form-error" role="alert"></p>
       <div class="dialog-actions">
         <button type="button" class="secondary" id="cancelCourseBtn">Annuler</button>
@@ -179,12 +190,12 @@
   </dialog>
 
 
-  <dialog id="scheduleDialog" class="schedule-dialog">
+  <dialog id="scheduleDialog" class="schedule-dialog" aria-labelledby="scheduleTitle">
     <div class="dialog-card schedule-card">
       <div class="dialog-head">
         <div>
           <p class="eyebrow">IETC · Bac 2</p>
-          <h2>Horaire 2026–2027</h2>
+          <h2 id="scheduleTitle">Horaire 2026–2027</h2>
           <p class="muted schedule-subtitle">Version du 31/08/2026</p>
         </div>
         <button type="button" class="icon-btn" id="closeScheduleBtn"
@@ -275,6 +286,14 @@
 
   <section id="printReport" hidden aria-label="Bilan imprimable"></section>
 
+  <dialog id="weekDialog" aria-labelledby="weekTitle">
+    <div class="dialog-card">
+      <div class="dialog-head"><h2 id="weekTitle">Aperçu de la semaine</h2><button type="button" class="icon-btn" data-close="weekDialog" aria-label="Fermer">×</button></div>
+      <div class="week-controls"><button id="weekPrevious" class="secondary" aria-label="Semaine précédente">Précédente</button><p id="weekRange" role="status"></p><button id="weekNext" class="secondary" aria-label="Semaine suivante">Suivante</button><button id="weekCurrent" class="text-button">Cette semaine</button></div>
+      <div class="table-wrap"><div id="weekDays" class="week-days"></div></div>
+    </div>
+  </dialog>
+
   <template id="courseRowTemplate">
     <tr class="course-row">
       <th scope="row"><span class="course-name"></span><span class="course-day"></span></th>
@@ -282,11 +301,11 @@
       <td class="absence-fraction"><span class="absence-count"></span><span class="muted"> / <span class="absence-limit"></span></span></td>
       <td><strong class="absence-left"></strong></td>
       <td><span class="risk-badge"></span></td>
-      <td><div class="row-actions"><button class="secondary quick-present" data-icon="check">Présent</button><button class="secondary quick-absent" data-icon="close">Absent</button><button class="secondary details-btn" data-icon="detail">Détail</button></div></td>
+      <td><div class="row-today-status" hidden></div><div class="row-actions"><button class="secondary quick-present" data-icon="check">Présent</button><button class="secondary quick-absent" data-icon="close">Absent</button><button class="secondary details-btn" data-icon="detail">Détail</button></div></td>
     </tr>
   </template>
 
-  <script src="planning.js?v=16"></script>
-  <script src="app.js?v=16"></script>
+  <script src="planning.js?v=17"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

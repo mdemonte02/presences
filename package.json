@@ -8,6 +8,7 @@
     "check": "node --check presence-cours-app-v3/app.js && node --check presence-cours-app-v3/planning.js && node --check presence-cours-app-v3/sw.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.62.1"
   }
 }

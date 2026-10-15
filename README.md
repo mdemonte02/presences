@@ -16,7 +16,9 @@ Le menu **Outils**, à côté d’« Encoder une séance », regroupe l’encoda
 
 La présentation est claire et compacte par défaut. Le tableau des cours se trie par nom, taux de présence, absences ou quota restant en cliquant sur les en-têtes. Les boutons Présent et Absent d’une ligne encodent la date du jour ; Détail ouvre le bilan du cours. Le thème sombre reste disponible et le choix est mémorisé.
 
-- **Réglages de l’horaire** : choisir les jours et le quadrimestre de chaque cours, les dates de Q1/Q2 et les congés. Les dates sont facultatives ; une période renseignée inclut son premier et son dernier jour. Un jour sans case cochée n'est pas proposé dans « Aujourd’hui ». Le nombre de séances prévues reste indépendant du calendrier et détermine la limite de 40 %.
+- **Réglages de l’horaire** : les onglets Cours, Quadrimestres et Congés séparent les réglages. Choisir un cours dans la liste pour modifier ses paramètres ; les modifications en cours restent conservées lors du passage entre onglets, puis sont enregistrées ensemble avec Sauvegarder. Choisir les jours et le quadrimestre de chaque cours, les dates de Q1/Q2 et les congés. Les dates sont facultatives ; une période renseignée inclut son premier et son dernier jour. Un jour sans case cochée n'est pas proposé dans « Aujourd’hui ». Le nombre de séances prévues reste indépendant du calendrier et détermine la limite de 40 %.
+- **Cette semaine** : depuis Aujourd’hui, consulter le planning du lundi au vendredi, les séances déplacées ou annulées et les statuts déjà encodés. Les boutons Précédente et Suivante changent la semaine affichée. Cette vue utilise le quadrimestre sélectionné et ne modifie aucune séance.
+- **État du jour** : après encodage, la ligne du cours affiche le statut de la séance du jour avec un bouton Modifier à la place des raccourcis Présent/Absent.
 - **Encoder une journée** : choisir une date, cocher les cours à enregistrer et définir leur statut et leur note. Les cours prévus pour le quadrimestre sélectionné sont présélectionnés, sauf ceux déjà encodés. Les autres cours peuvent être cochés manuellement. Un remplacement demande confirmation ; le bouton Annuler de la notification restaure tout le lot.
 - **Voir le détail** : filtrer le bilan et les séances par dates, bornes incluses. Le quota d'absences du cours entier reste affiché séparément du bilan de la période.
 - **Changements ponctuels** : annuler une occurrence ou la déplacer vers une date libre, dans le quadrimestre et hors congés. Les jours habituels et l’historique restent inchangés. Retirer un changement rétablit la séance dans le planning. Pour modifier les jours ou les congés d'un cours dont un changement dépend, retirer d'abord ce changement si les nouveaux réglages le rendent incohérent.
@@ -44,6 +46,8 @@ PRESENCE_CHROMIUM_PATH=/usr/bin/chromium npm run test:browser -- --workers=2
 ```
 
 GitHub Actions exécute les contrôles, les tests Node et les tests Chromium à chaque envoi sur `main` et pour les pull requests. Netlify utilise le dossier `presence-cours-app-v3` et exécute les contrôles et les tests Node avant publication via `netlify.toml`. Un échec de ces commandes bloque ce déploiement ; le résultat du job navigateur GitHub n'est pas une condition d'attente du déploiement Netlify.
+
+Les tests navigateur comprennent des contrôles axe-core ciblés sur les règles WCAG 2.1 A/AA pour la page claire et sombre, les onglets de réglages et la semaine. Ils vérifient aussi la navigation au clavier et une largeur de 640 pixels, équivalente au reflow à 200 % sur un écran de 1280 pixels. Ces contrôles automatisés ne constituent pas une certification d’accessibilité.
 
 ## Mode hors ligne
 
