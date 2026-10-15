@@ -366,3 +366,8 @@ button:not(:disabled):active, .schedule-link:active, .tools-menu summary:active,
   #printReport thead { display: table-header-group; }
   #printReport tr { break-inside: avoid; }
 }
+
+/* Deux plans : la présence grandit, la silhouette observée reste immobile. */
+.brand-mark { position: relative; overflow: visible; }
+.logo-watcher { display: block; width: 48px; height: 48px; transform-origin: 50% 94%; }
+.brand-mark .logo-person { position: absolute; inset: 0; fill: var(--bg); pointer-events: none; }

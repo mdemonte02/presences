@@ -948,25 +948,23 @@ window.addEventListener("focus", refreshDay);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshDay(); });
 setInterval(refreshDay, 60_000);
 
-// Animer le conteneur HTML : évite les différences de rendu des SVG externes.
+// Animer uniquement la silhouette extérieure, devant une silhouette centrale fixe.
 const brand = document.querySelector(".brand");
 const brandMark = brand.querySelector(".brand-mark");
+const logoWatcher = brand.querySelector(".logo-watcher");
 const logoMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 let logoAnimation;
 function playLogoAnimation() {
   logoAnimation?.cancel();
   const reduced = logoMotionPreference.matches;
-  logoAnimation = brandMark.animate(reduced ? [
+  logoAnimation = logoWatcher.animate(reduced ? [
     { opacity: 1 }, { opacity: .45 }, { opacity: 1 }
   ] : [
-    { transform: "translate(0, 0) rotate(0) scale(1)" },
-    { transform: "translate(0, 6px) scale(.92, .78)" },
-    { transform: "translate(-6px, -7px) rotate(-18deg) scale(1.08)" },
-    { transform: "translate(6px, -5px) rotate(18deg) scale(1.06)" },
-    { transform: "translate(0, -4px) rotate(0) scale(1.04)" },
-    { transform: "translate(0, 2px) scale(1.05, .94)" },
-    { transform: "translate(0, 0) rotate(0) scale(1)" }
-  ], { duration: reduced ? 600 : 1800, easing: "ease-in-out", iterations: 1 });
+    { transform: "scale(1)", offset: 0 },
+    { transform: "scale(1.34, 1.28)", offset: .35 },
+    { transform: "scale(1.34, 1.28)", offset: .7 },
+    { transform: "scale(1)", offset: 1 }
+  ], { duration: reduced ? 600 : 2000, easing: "ease-in-out", iterations: 1 });
 }
 brand.addEventListener("pointerenter", playLogoAnimation);
 brandMark.addEventListener("focus", playLogoAnimation);
