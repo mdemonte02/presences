@@ -12,6 +12,8 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory presence-cours-app-v3
 
 ## Utilisation
 
+Le menu **Outils**, à côté d’« Encoder une séance », regroupe l’encodage d’une journée, le PDF de l’horaire, les changements ponctuels, les réglages et les sauvegardes. Il se parcourt au clavier avec Tab et se ferme avec Échap. Le tableau de bord reste accessible près du choix Q1/Q2. Dans l’historique, la correction groupée apparaît après sélection d’au moins une séance.
+
 La présentation est claire et compacte par défaut. Le tableau des cours se trie par nom, taux de présence, absences ou quota restant en cliquant sur les en-têtes. Les boutons Présent et Absent d’une ligne encodent la date du jour ; Détail ouvre le bilan du cours. Le thème sombre reste disponible et le choix est mémorisé.
 
 - **Réglages de l’horaire** : choisir les jours et le quadrimestre de chaque cours, les dates de Q1/Q2 et les congés. Les dates sont facultatives ; une période renseignée inclut son premier et son dernier jour. Un jour sans case cochée n'est pas proposé dans « Aujourd’hui ». Le nombre de séances prévues reste indépendant du calendrier et détermine la limite de 40 %.

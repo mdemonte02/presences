@@ -1,9 +1,10 @@
+const { clickTool } = require('./helpers.cjs');
 const {test,expect}=require('@playwright/test');
 const fs=require('node:fs/promises');
 const readState=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('presenceCours.v1')));
 async function close(page,id){await page.locator(`[data-close="${id}"]`).first().click();}
 async function exception(page,course,date,action,target=''){
-  await page.locator('#exceptionsBtn').click();
+  await clickTool(page, 'exceptionsBtn');
   await page.locator('#exceptionCourse').selectOption(course);
   await page.locator('#exceptionDate').fill(date);
   await page.locator('#exceptionAction').selectOption(action);
@@ -31,20 +32,20 @@ test('déplacer un cours, conserver son historique et le jour habituel, puis ann
   expect((await readState(page)).entries).toEqual(before);
   await expect(page.locator('#coursesGrid .course-day').first()).toHaveText('Lundi');
   await page.reload();await expect(page.locator('.today-course')).toHaveCount(2);
-  await page.locator('#batchBtn').click();
+  await clickTool(page, 'batchBtn');
   await expect(page.locator('[data-batch-course="web"] [data-batch-include]')).toBeChecked();
   await page.locator('#cancelBatchBtn').click();
   await exception(page,'computers','2026-10-15','cancel');await close(page,'exceptionsDialog');
   await expect(page.locator('.today-course')).toHaveCount(1);
   await page.locator('#undoBtn').click();await expect(page.locator('.today-course')).toHaveCount(2);
-  await page.locator('#exceptionsBtn').click();await page.locator('#exceptionsList button').click();await close(page,'exceptionsDialog');
+  await clickTool(page, 'exceptionsBtn');await page.locator('#exceptionsList button').click();await close(page,'exceptionsDialog');
   await expect(page.locator('.today-course')).toHaveCount(1);
 });
 test('conflits de déplacement refusés et sauvegarde JSON des changements',async({page},testInfo)=>{
   await exception(page,'web','2026-10-12','move','2026-10-19');
   await expect(page.locator('#exceptionError')).toContainText('déjà prévue');
   await page.locator('#exceptionTarget').fill('2026-10-15');await page.locator('#exceptionForm button[type=submit]').click();await close(page,'exceptionsDialog');
-  const downloadPromise=page.waitForEvent('download');await page.locator('#exportBtn').click();const d=await downloadPromise;
+  const downloadPromise=page.waitForEvent('download');await clickTool(page, 'exportBtn');const d=await downloadPromise;
   const path=testInfo.outputPath('planning.json');await d.saveAs(path);
   const saved=JSON.parse(await fs.readFile(path,'utf8'));expect(saved.calendar.exceptions).toHaveLength(1);
   page.on('dialog',dialog=>dialog.accept());await page.locator('#importInput').setInputFiles(path);

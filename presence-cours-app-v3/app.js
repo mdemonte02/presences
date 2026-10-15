@@ -35,6 +35,14 @@ const historySelection = new Set();
 let visibleHistoryIds = [];
 let reportSort = { key: "name", direction: "asc" };
 let courseSort = null;
+function iconMarkup(name) {
+  return `<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg?v=16#${name}"/></svg>`;
+}
+function decorateButtons(root = document) {
+  root.querySelectorAll("button[data-icon]").forEach(button => {
+    if (!button.querySelector(".ui-icon")) button.insertAdjacentHTML("afterbegin", iconMarkup(button.dataset.icon));
+  });
+}
 function visibleCourses() { return state.courses.filter(c => Planning.quarterOf(c) === selectedQuarter); }
 function notify(message, previous = null) {
   undoEntries = previous;
@@ -175,6 +183,7 @@ function render() {
   if (document.getElementById("overviewDialog").open) renderReport();
   if (document.getElementById("missingDialog").open) renderMissing();
   populateCourseSelect();
+  decorateButtons();
 }
 
 function renderSummary() {
@@ -210,6 +219,7 @@ function renderToday() {
     const row = document.createElement("article");
     row.className = "today-course";
     const info = document.createElement("div");
+    info.className = "today-info";
     const title = document.createElement("h3");
     title.textContent = course.name;
     const status = document.createElement("p");
@@ -221,6 +231,7 @@ function renderToday() {
     if (entry) {
       const edit = document.createElement("button");
       edit.className = "secondary";
+      edit.dataset.icon = "edit";
       edit.textContent = "Modifier la séance";
       edit.setAttribute("aria-label", `Modifier la séance : ${course.name}`);
       edit.addEventListener("click", () => openAttendance(entry));
@@ -230,6 +241,7 @@ function renderToday() {
         const button = document.createElement("button");
         button.className = value === "present" ? "primary" : "secondary";
         button.textContent = statusLabels[value];
+        button.dataset.icon = value === "present" ? "check" : "close";
         button.setAttribute("aria-label", `${statusLabels[value]} : ${course.name}`);
         button.addEventListener("click", () => quickAttendance(course.id, value));
         actions.appendChild(button);
@@ -276,9 +288,11 @@ function renderCourses() {
     node.querySelector(".details-btn").addEventListener("click", () => showDetails(course.id));
     grid.appendChild(node);
   });
+  decorateButtons(grid);
 }
 
 function renderHistory() {
+  document.getElementById("clearHistoryBtn").hidden = !state.entries.length;
   const list = document.getElementById("historyList");
   const courseFilter = document.getElementById("historyCourse").value;
   const statusFilter = document.getElementById("historyStatus").value;
@@ -289,7 +303,9 @@ function renderHistory() {
   for (const id of historySelection) if (!visibleHistoryIds.includes(id)) historySelection.delete(id);
   updateHistorySelection();
   if (!entries.length) {
-    list.innerHTML = `<div class="empty">Aucune séance à afficher. Encodez une séance ou ajustez les filtres.</div>`;
+    list.innerHTML = state.entries.length
+      ? '<div class="empty"><p>Aucune séance pour ces filtres.</p></div>'
+      : '<div class="empty empty-history"><svg viewBox="0 0 96 96" aria-hidden="true"><use href="logo.svg?v=16#presence"/></svg><p>Aucune séance pour le moment</p></div>';
     return;
   }
 
@@ -303,7 +319,7 @@ function renderHistory() {
           ${e.note ? `<div class="muted">${escapeHtml(e.note)}</div>` : ""}
         </div>
         <span class="status-pill status-${e.status}">${statusLabels[e.status]}</span>
-        <div class="history-actions"><button class="secondary" data-edit="${escapeHtml(e.id)}">Modifier</button><button class="delete-btn" data-delete="${escapeHtml(e.id)}">Supprimer</button></div>
+        <div class="history-actions"><button class="secondary" data-icon="edit" data-edit="${escapeHtml(e.id)}">Modifier</button><button class="delete-btn" data-delete="${escapeHtml(e.id)}">Supprimer</button></div>
       </div>
     `;
   }).join("");
@@ -318,6 +334,7 @@ function renderHistory() {
       notify("Séance supprimée.", previous);
     });
   });
+  decorateButtons(list);
 }
 
 function populateCourseSelect() {
@@ -497,6 +514,10 @@ function updateHistorySelection() {
   const count = historySelection.size;
   document.getElementById("bulkEditBtn").textContent = `Corriger la sélection (${count})`;
   document.getElementById("bulkEditBtn").disabled = !count;
+  document.getElementById("bulkEditBtn").hidden = !count;
+  document.getElementById("historySelectionBar").hidden = !visibleHistoryIds.length;
+  document.getElementById("historySelectionBar").classList.toggle("has-selection", !!count);
+  decorateButtons(document.getElementById("historySelectionBar"));
   const all = document.getElementById("selectHistory");
   all.disabled = !visibleHistoryIds.length;
   all.checked = !!count && count === visibleHistoryIds.length;
@@ -776,6 +797,30 @@ document.getElementById("bulkEditForm").addEventListener("submit", event => {
   state.entries = next; historySelection.clear(); saveState(); render();
   document.getElementById("bulkEditDialog").close(); notify("Séances corrigées.", previous);
 });
+const toolsMenu = document.getElementById("toolsMenu");
+const toolsTrigger = toolsMenu.querySelector("summary");
+toolsMenu.addEventListener("click", event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const dialogIds = { batchBtn: "batchDialog", scheduleBtn: "scheduleDialog", settingsBtn: "courseDialog", exceptionsBtn: "exceptionsDialog" };
+  if (dialogIds[button.id]) document.getElementById(dialogIds[button.id]).dataset.toolsOrigin = "true";
+  toolsMenu.open = false;
+  if (!document.querySelector("dialog[open]")) toolsTrigger.focus();
+});
+document.querySelectorAll("dialog").forEach(dialog => dialog.addEventListener("close", () => {
+  if (dialog.dataset.toolsOrigin === "true") {
+    delete dialog.dataset.toolsOrigin;
+    if (!document.querySelector("dialog[open]")) toolsTrigger.focus();
+  }
+}));
+toolsMenu.addEventListener("keydown", event => {
+  if (event.key === "Escape" && toolsMenu.open) { toolsMenu.open = false; toolsTrigger.focus(); event.preventDefault(); event.stopPropagation(); }
+});
+toolsMenu.addEventListener("focusout", event => { if (event.relatedTarget && !toolsMenu.contains(event.relatedTarget)) toolsMenu.open = false; });
+document.addEventListener("pointerdown", event => { if (!toolsMenu.contains(event.target)) toolsMenu.open = false; });
+const buttonIcons = { addAttendanceBtn: "plus", batchBtn: "batch", scheduleBtn: "calendar", exportBtn: "download", importBtn: "upload", overviewBtn: "chart", exceptionsBtn: "changes", settingsBtn: "settings", missingBtn: "clock", resetFilters: "reset", bulkEditBtn: "edit", csvSummaryBtn: "download", csvHistoryBtn: "list", printReportBtn: "print", resetPeriod: "reset", addHolidayBtn: "plus" };
+for (const [id, name] of Object.entries(buttonIcons)) document.getElementById(id).dataset.icon = name;
+document.querySelectorAll(".icon-btn:not(#themeBtn), #dismissNotice").forEach(button => { button.innerHTML = iconMarkup("close"); });
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => notify("Le mode hors ligne n’a pas pu être préparé. Réessayez en ligne."));
 }

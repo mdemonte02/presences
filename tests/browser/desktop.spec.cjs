@@ -1,3 +1,4 @@
+const { clickTool } = require('./helpers.cjs');
 const { test, expect } = require('@playwright/test');
 const fs = require('node:fs/promises');
 const readState = page => page.evaluate(() => JSON.parse(localStorage.getItem('presenceCours.v1')));
@@ -13,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 test('anciens enregistrements conservés, jours et quadrimestres modifiables', async ({ page }) => {
   await page.locator('#coursesGrid .quick-present').first().click();
   const before = (await readState(page)).entries;
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   const web = course(page, 'web');
   await web.locator('[data-weekday][value="Jeudi"]').check();
   await web.locator('[data-course-days]').fill('30');
@@ -22,7 +23,7 @@ test('anciens enregistrements conservés, jours et quadrimestres modifiables', a
   await page.reload();
   expect((await readState(page)).entries).toEqual(before);
   await expect(page.locator('.today-course')).toHaveCount(2);
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await course(page, 'web').locator('[data-course-quarter]').selectOption('Q2');
   await saveSettings(page);
   await expect(page.locator('#coursesGrid .course-row')).toHaveCount(4);
@@ -31,7 +32,7 @@ test('anciens enregistrements conservés, jours et quadrimestres modifiables', a
   await expect(page.locator('.today-course')).toHaveCount(2);
 });
 test('dates, congés et annulation des réglages', async ({ page }) => {
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await page.locator('#Q1Start').fill('2026-09-01');
   await page.locator('#Q1End').fill('2027-01-31');
   await page.locator('#Q2Start').fill('2027-01-01');
@@ -48,11 +49,11 @@ test('dates, congés et annulation des réglages', async ({ page }) => {
   await expect(page.locator('.today-course')).toHaveCount(0);
   await page.reload();
   await expect(page.locator('.today-course')).toHaveCount(0);
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await page.locator('.holiday-row button').click();
   await page.locator('#cancelCourseBtn').click();
   await expect(page.locator('.today-course')).toHaveCount(0);
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await expect(page.locator('.holiday-row')).toHaveCount(1);
   await page.locator('.holiday-row button').click();
   await saveSettings(page);
@@ -62,7 +63,7 @@ test('dates, congés et annulation des réglages', async ({ page }) => {
   await expect(page.locator('.today-course')).toHaveCount(0);
 });
 test('encodage groupé, remplacement confirmé et annulation du lot entier', async ({ page }) => {
-  await page.locator('#batchBtn').click();
+  await clickTool(page, 'batchBtn');
   const web = page.locator('[data-batch-course="web"]');
   const computers = page.locator('[data-batch-course="computers"]');
   await expect(computers.locator('[data-batch-include]')).toBeChecked();
@@ -73,7 +74,7 @@ test('encodage groupé, remplacement confirmé et annulation du lot entier', asy
   await page.locator('#batchSave').click();
   await expect(page.locator('#historyList .history-item')).toHaveCount(2);
   const first = (await readState(page)).entries;
-  await page.locator('#batchBtn').click();
+  await clickTool(page, 'batchBtn');
   await expect(page.locator('[data-batch-include]:checked')).toHaveCount(0);
   await expect(page.locator('#batchSave')).toBeDisabled();
   await web.locator('[data-batch-include]').check();
@@ -112,12 +113,12 @@ test('bilan par période : quatre statuts, justifiés présents, quota global di
   await expect(page.locator('[data-stat=rate]')).toHaveText('—');
 });
 test('export/import du calendrier, anciennes sauvegardes et import invalide', async ({ page }, testInfo) => {
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await page.locator('#Q1Start').fill('2026-09-01');
   await page.locator('#Q1End').fill('2027-01-31');
   await saveSettings(page);
   const downloadPromise = page.waitForEvent('download');
-  await page.locator('#exportBtn').click();
+  await clickTool(page, 'exportBtn');
   const download = await downloadPromise;
   const path = testInfo.outputPath('backup.json');
   await download.saveAs(path);
@@ -147,10 +148,10 @@ test('nouveaux réglages et encodage disponibles hors ligne sans erreur JS', asy
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await context.setOffline(true);
   await page.reload();
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await expect(course(page, 'web')).toBeVisible();
   await page.locator('#cancelCourseBtn').click();
-  await page.locator('#batchBtn').click();
+  await clickTool(page, 'batchBtn');
   await page.locator('#batchSave').click();
   await expect(page.locator('#historyList .history-item')).toHaveCount(1);
   await page.reload();
@@ -166,7 +167,7 @@ test('un calendrier local endommagé ne supprime pas les présences existantes',
   });
   await page.reload();
   await expect(page.locator('#historyList .history-item')).toHaveCount(1);
-  await page.locator('#settingsBtn').click();
+  await clickTool(page, 'settingsBtn');
   await expect(page.locator('#Q1Start')).toHaveValue('');
   await saveSettings(page);
   await page.reload();
@@ -222,4 +223,31 @@ test('migration du thème précédent : présentation claire et historique conse
   await page.reload();
   await expect(page.locator('body')).not.toHaveClass('dark');
   expect((await readState(page)).entries).toEqual(entries);
+});
+test('menu Outils : navigation au clavier, Échap, clic extérieur et retour de focus', async ({ page }) => {
+  const trigger=page.locator('#toolsMenu > summary');
+  await expect(page.locator('#settingsBtn')).not.toBeVisible();
+  await trigger.focus();await page.keyboard.press('Enter');
+  await expect(page.locator('#settingsBtn')).toBeVisible();
+  await page.keyboard.press('Tab');await expect(page.locator('#batchBtn')).toBeFocused();
+  await page.keyboard.press('Escape');await expect(page.locator('#settingsBtn')).not.toBeVisible();await expect(trigger).toBeFocused();
+  await trigger.click();await page.locator('.hero h2').click();await expect(page.locator('#toolsMenu')).not.toHaveAttribute('open','');
+  await clickTool(page,'settingsBtn');await expect(page.locator('#courseDialog')).toBeVisible();
+  await page.locator('#cancelCourseBtn').click();await expect(trigger).toBeFocused();
+});
+test('historique : mascotte, état filtré et correction visible seulement après sélection', async ({ page }) => {
+  await expect(page.locator('.empty-history svg')).toBeVisible();
+  await expect(page.locator('#historyList')).toContainText('Aucune séance pour le moment');
+  await expect(page.locator('#historySelectionBar')).toBeHidden();
+  await expect(page.locator('#bulkEditBtn')).toBeHidden();
+  await page.locator('#coursesGrid .quick-present').first().click();
+  await expect(page.locator('.empty-history')).toHaveCount(0);
+  await expect(page.locator('#historySelectionBar')).toBeVisible();
+  await expect(page.locator('#bulkEditBtn')).toBeHidden();
+  await page.locator('#selectHistory').check();await expect(page.locator('#bulkEditBtn')).toBeVisible();
+  await page.locator('#selectHistory').uncheck();await expect(page.locator('#bulkEditBtn')).toBeHidden();
+  await page.locator('#historyStatus').selectOption('absent');
+  await expect(page.locator('#historyList')).toContainText('Aucune séance pour ces filtres');
+  await expect(page.locator('.empty-history')).toHaveCount(0);
+  await page.locator('#resetFilters').click();await expect(page.locator('#historyList .history-item')).toHaveCount(1);
 });

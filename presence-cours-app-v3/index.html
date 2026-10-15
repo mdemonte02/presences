@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#111827" />
   <title>Watchling</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg?v=14" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="icon" href="icon.svg?v=16" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 96 96" focusable="false"><use href="logo.svg?v=14#presence"/></svg></span><div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 96 96" focusable="false"><use href="logo.svg?v=16#presence"/></svg></span><div>
       <p class="eyebrow">IETC · Bac 2</p>
       <h1>Watchling</h1>
     </div></div>
@@ -26,15 +26,16 @@
         <h2>Bachelier en Informatique</h2>
       </div>
       <div class="hero-actions">
-        <div class="attendance-actions"><button id="addAttendanceBtn" class="primary">+ Encoder une séance</button>
-        <button id="batchBtn" class="secondary">Encoder une journée</button></div>
-        <div class="utility-actions"><button id="scheduleBtn" class="secondary">Horaire</button>
-        <button id="exportBtn" class="secondary">Exporter</button>
-        <button id="importBtn" class="secondary" type="button">Importer</button>
-        <label hidden>
-          Importer
-          <input id="importInput" type="file" accept="application/json" hidden />
-        </label></div>
+        <button id="addAttendanceBtn" class="primary">Encoder une séance</button>
+        <details id="toolsMenu" class="tools-menu">
+          <summary aria-controls="toolsPanel"><svg class="ui-icon" aria-hidden="true"><use href="ui-icons.svg?v=16#settings"/></svg>Outils<svg class="ui-icon menu-chevron" aria-hidden="true"><use href="ui-icons.svg?v=16#chevron"/></svg></summary>
+          <nav id="toolsPanel" class="tools-panel" aria-label="Outils Watchling">
+            <div class="tools-group"><h3>Encodage</h3><button id="batchBtn" type="button">Encoder une journée</button></div>
+            <div class="tools-group"><h3>Planning</h3><button id="scheduleBtn" type="button">Consulter l’horaire</button><button id="exceptionsBtn" type="button">Changements ponctuels</button><button id="settingsBtn" type="button">Réglages de l’horaire</button></div>
+            <div class="tools-group"><h3>Sauvegardes</h3><button id="exportBtn" type="button">Exporter la sauvegarde</button><button id="importBtn" type="button">Importer une sauvegarde</button></div>
+          </nav>
+        </details>
+        <input id="importInput" type="file" accept="application/json" hidden />
       </div>
     </section>
 
@@ -42,7 +43,7 @@
 
     <div class="course-toolbar">
       <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
-      <div class="courses-tools"><button id="overviewBtn" class="secondary">Tableau de bord</button><button id="exceptionsBtn" class="secondary">Changements ponctuels</button><button id="settingsBtn" class="secondary">Réglages de l’horaire</button></div>
+      <div class="courses-tools"><button id="overviewBtn" class="text-button">Tableau de bord</button></div>
     </div>
     <section class="today-panel card" aria-labelledby="todayTitle">
       <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><div class="today-meta"><span id="todayDate" class="muted"></span><button id="missingBtn" class="secondary">Séances à vérifier</button></div></div>
@@ -71,11 +72,13 @@
       <button id="clearHistoryBtn" class="danger-ghost">Effacer l’historique</button>
     </section>
 
+    <div class="history-workspace">
     <div class="history-filters"><label>Cours<select id="historyCourse"><option value="">Tous les cours</option></select></label><label>Statut<select id="historyStatus"><option value="">Tous les statuts</option><option value="present">Présent</option><option value="absent">Absent</option><option value="justified">Justifié</option><option value="cancelled">Annulé</option></select></label><label>Date<input id="historyDate" type="date"></label><button id="resetFilters" class="secondary">Réinitialiser</button></div>
-    <div class="history-bulk"><label><input type="checkbox" id="selectHistory"> Sélectionner les séances affichées</label><button id="bulkEditBtn" class="secondary" disabled>Corriger la sélection (0)</button></div>
+    <div class="history-bulk" id="historySelectionBar" hidden><label><input type="checkbox" id="selectHistory"> Sélectionner les séances affichées</label><button id="bulkEditBtn" class="secondary" disabled hidden>Corriger la sélection (0)</button></div>
     <section class="history card" aria-label="Historique des séances">
       <div id="historyList"></div>
     </section>
+    </div>
   <div id="notice" class="notice" hidden><span id="noticeText" role="status"></span><button id="undoBtn" class="secondary">Annuler</button><button id="dismissNotice" class="secondary" aria-label="Fermer la notification">×</button></div>
   </main>
 
@@ -279,11 +282,11 @@
       <td class="absence-fraction"><span class="absence-count"></span><span class="muted"> / <span class="absence-limit"></span></span></td>
       <td><strong class="absence-left"></strong></td>
       <td><span class="risk-badge"></span></td>
-      <td><div class="row-actions"><button class="secondary quick-present">Présent</button><button class="secondary quick-absent">Absent</button><button class="secondary details-btn">Détail</button></div></td>
+      <td><div class="row-actions"><button class="secondary quick-present" data-icon="check">Présent</button><button class="secondary quick-absent" data-icon="close">Absent</button><button class="secondary details-btn" data-icon="detail">Détail</button></div></td>
     </tr>
   </template>
 
-  <script src="planning.js?v=14"></script>
-  <script src="app.js?v=14"></script>
+  <script src="planning.js?v=16"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>
