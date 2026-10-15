@@ -20,6 +20,38 @@ const statusLabels = {
 };
 
 let state = loadState();
+let selectedQuarter = localStorage.getItem("presenceCours.quarter") === "Q2" ? "Q2" : "Q1";
+let editingId = null;
+let undoEntries = null;
+const q1Ids = new Set(["web", "os2", "ebusiness", "computers", "math"]);
+function visibleCourses() { return state.courses.filter(c => q1Ids.has(c.id) === (selectedQuarter === "Q1")); }
+function notify(message, previous = null) {
+  undoEntries = previous;
+  document.getElementById("noticeText").textContent = message;
+  document.getElementById("undoBtn").hidden = !previous;
+  document.getElementById("notice").hidden = false;
+}
+function snapshot() { return structuredClone(state.entries); }
+function openAttendance(entry = null) {
+  editingId = entry?.id ?? null;
+  document.getElementById("attendanceForm").reset();
+  document.getElementById("attendanceTitle").textContent = entry ? "Modifier la séance" : "Encoder une séance";
+  document.getElementById("dateInput").value = entry?.date ?? todayIso();
+  document.getElementById("courseSelect").value = entry?.courseId ?? visibleCourses()[0]?.id ?? state.courses[0]?.id;
+  document.getElementById("noteInput").value = entry?.note ?? "";
+  if (entry) document.querySelector(`input[name="status"][value="${entry.status}"]`).checked = true;
+  document.getElementById("attendanceDialog").showModal();
+}
+function quickAttendance(courseId, status) {
+  const date = todayIso();
+  const existing = state.entries.find(e => e.courseId === courseId && e.date === date);
+  if (existing && !confirm("Une séance existe déjà aujourd’hui. Remplacer son statut ?")) return;
+  const previous = snapshot();
+  state.entries = state.entries.filter(e => !(e.courseId === courseId && e.date === date));
+  state.entries.push({ id: existing?.id ?? crypto.randomUUID(), courseId, date, status, note: existing?.note ?? "", createdAt: existing?.createdAt ?? new Date().toISOString() });
+  saveState(); render();
+  notify(`${statusLabels[status]} · ${state.courses.find(c => c.id === courseId).name} · ${formatDate(date)}`, previous);
+}
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -113,6 +145,10 @@ function todayIso() {
 
 function render() {
   document.body.classList.toggle("dark", state.dark);
+  document.querySelectorAll("[data-quarter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.quarter === selectedQuarter)));
+  document.getElementById("themeBtn").setAttribute("aria-pressed", String(state.dark));
+  const backup = localStorage.getItem("presenceCours.lastBackup");
+  if (backup) document.getElementById("backupStatus").textContent = `Dernier export : ${formatDate(backup)}. Exportez à nouveau après vos modifications.`;
   renderSummary();
   renderCourses();
   renderHistory();
@@ -120,17 +156,17 @@ function render() {
 }
 
 function renderSummary() {
-  const all = state.courses.map(metrics);
+  const all = visibleCourses().map(metrics);
   const totalEntries = all.reduce((s,m) => s + m.completed, 0);
   const totalPresent = all.reduce((s,m) => s + m.present, 0);
   const totalAbsent = all.reduce((s,m) => s + m.absent, 0);
-  const totalAllowed = state.courses.reduce((s,c) => s + maxAbsences(c.totalDays), 0);
+  const totalAllowed = visibleCourses().reduce((s,c) => s + maxAbsences(c.totalDays), 0);
   const globalPresence = totalEntries ? Math.round((totalPresent / totalEntries) * 1000) / 10 : 100;
 
   document.getElementById("summaryGrid").innerHTML = `
-    <div class="summary-card"><span>Présence globale</span><strong>${globalPresence}%</strong></div>
+    <div class="summary-card"><span>Présence ${selectedQuarter}</span><strong>${totalEntries ? globalPresence + "%" : "—"}</strong></div>
     <div class="summary-card"><span>Absences injustifiées</span><strong>${totalAbsent}</strong></div>
-    <div class="summary-card"><span>Absences autorisées</span><strong>${totalAllowed}</strong></div>
+    <div class="summary-card"><span>Maximum d’absences</span><strong>${totalAllowed}</strong></div>
     <div class="summary-card"><span>Séances encodées</span><strong>${totalEntries}</strong></div>
   `;
 }
@@ -140,48 +176,42 @@ function renderCourses() {
   const template = document.getElementById("courseCardTemplate");
   grid.innerHTML = "";
 
-  const q1Ids = new Set(["web", "os2", "ebusiness", "computers", "math"]);
-  const quarters = [
-    { label: "Q1", courses: state.courses.filter(course => q1Ids.has(course.id)) },
-    { label: "Q2", courses: state.courses.filter(course => !q1Ids.has(course.id)) }
-  ];
+  const courses = visibleCourses();
+  courses.forEach(course => {
+    const node = template.content.cloneNode(true);
+    const m = metrics(course);
+    const [label, cls] = riskLabel(m);
 
-  quarters.forEach(({ label, courses }) => {
-    if (!courses.length) return;
-    const heading = document.createElement("h3");
-    heading.className = "quarter-heading";
-    heading.textContent = label;
-    grid.appendChild(heading);
+    node.querySelector(".course-day").textContent = course.day;
+    node.querySelector(".course-name").textContent = course.name;
+    node.querySelector(".presence-rate").textContent = m.completed ? `${m.presenceRate}%` : "—";
+    node.querySelector(".progress-fill").style.width = `${m.completed ? Math.max(0, Math.min(100, m.presenceRate)) : 0}%`;
+    node.querySelector(".absence-count").textContent = m.absent;
+    node.querySelector(".absence-limit").textContent = m.limit;
+    node.querySelector(".absence-left").textContent = m.left;
 
-    courses.forEach(course => {
-      const node = template.content.cloneNode(true);
-      const m = metrics(course);
-      const [label, cls] = riskLabel(m);
+    node.querySelector(".absence-description").textContent = `${m.absent} absence(s) injustifiée(s) sur ${m.limit} maximum`;
+    node.querySelector(".quick-present").addEventListener("click", () => quickAttendance(course.id, "present"));
+    node.querySelector(".quick-absent").addEventListener("click", () => quickAttendance(course.id, "absent"));
+    node.querySelectorAll("button").forEach(button => button.setAttribute("aria-label", `${button.textContent} : ${course.name}`));
+    const badge = node.querySelector(".risk-badge");
+    badge.textContent = label;
+    badge.classList.add(cls);
 
-      node.querySelector(".course-day").textContent = course.day;
-      node.querySelector(".course-name").textContent = course.name;
-      node.querySelector(".presence-rate").textContent = `${m.presenceRate}%`;
-      node.querySelector(".progress-fill").style.width = `${Math.max(0, Math.min(100, m.presenceRate))}%`;
-      node.querySelector(".absence-count").textContent = m.absent;
-      node.querySelector(".absence-limit").textContent = m.limit;
-      node.querySelector(".absence-left").textContent = m.left;
-
-      const badge = node.querySelector(".risk-badge");
-      badge.textContent = label;
-      badge.classList.add(cls);
-
-      node.querySelector(".details-btn").addEventListener("click", () => showDetails(course.id));
-      grid.appendChild(node);
-    });
+    node.querySelector(".details-btn").addEventListener("click", () => showDetails(course.id));
+    grid.appendChild(node);
   });
 }
 
 function renderHistory() {
   const list = document.getElementById("historyList");
-  const entries = [...state.entries].sort((a,b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt));
+  const courseFilter = document.getElementById("historyCourse").value;
+  const statusFilter = document.getElementById("historyStatus").value;
+  const dateFilter = document.getElementById("historyDate").value;
+  const entries = state.entries.filter(e => (!courseFilter || e.courseId === courseFilter) && (!statusFilter || e.status === statusFilter) && (!dateFilter || e.date === dateFilter)).sort((a,b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt));
 
   if (!entries.length) {
-    list.innerHTML = `<div class="empty">Aucune séance encodée pour l’instant.</div>`;
+    list.innerHTML = `<div class="empty">Aucune séance à afficher. Encodez une séance ou ajustez les filtres.</div>`;
     return;
   }
 
@@ -191,27 +221,34 @@ function renderHistory() {
       <div class="history-item">
         <span class="history-date">${formatDate(e.date)}</span>
         <div>
-          <div class="history-course">${course?.name ?? "Cours supprimé"}</div>
+          <div class="history-course">${escapeHtml(course?.name ?? "Cours supprimé")}</div>
           ${e.note ? `<div class="muted">${escapeHtml(e.note)}</div>` : ""}
         </div>
         <span class="status-pill status-${e.status}">${statusLabels[e.status]}</span>
-        <button class="delete-btn" data-delete="${e.id}">Supprimer</button>
+        <div class="history-actions"><button class="secondary" data-edit="${escapeHtml(e.id)}">Modifier</button><button class="delete-btn" data-delete="${escapeHtml(e.id)}">Supprimer</button></div>
       </div>
     `;
   }).join("");
 
+  list.querySelectorAll("[data-edit]").forEach(btn => btn.addEventListener("click", () => openAttendance(state.entries.find(e => e.id === btn.dataset.edit))));
   list.querySelectorAll("[data-delete]").forEach(btn => {
     btn.addEventListener("click", () => {
+      const previous = snapshot();
       state.entries = state.entries.filter(e => e.id !== btn.dataset.delete);
       saveState();
       render();
+      notify("Séance supprimée.", previous);
     });
   });
 }
 
 function populateCourseSelect() {
   const select = document.getElementById("courseSelect");
-  select.innerHTML = state.courses.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  select.innerHTML = state.courses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+  const filter = document.getElementById("historyCourse");
+  const value = filter.value;
+  filter.innerHTML = '<option value="">Tous les cours</option>' + select.innerHTML;
+  filter.value = value;
 }
 
 function showDetails(courseId) {
@@ -221,7 +258,7 @@ function showDetails(courseId) {
   document.getElementById("detailsTitle").textContent = course.name;
   document.getElementById("detailsContent").innerHTML = `
     <div class="detail-stats">
-      <div class="detail-stat"><span>Présence</span><strong>${m.presenceRate}%</strong></div>
+      <div class="detail-stat"><span>Présence sur les séances encodées</span><strong>${m.completed ? m.presenceRate + "%" : "—"}</strong></div>
       <div class="detail-stat"><span>Absences injustifiées</span><strong>${m.absent} / ${m.limit}</strong></div>
       <div class="detail-stat"><span>Encore disponibles</span><strong>${m.left}</strong></div>
     </div>
@@ -243,9 +280,9 @@ function openCourseSettings() {
   const wrap = document.getElementById("courseSettingsList");
   wrap.innerHTML = state.courses.map(c => `
     <div class="settings-row">
-      <div><strong>${c.name}</strong><div class="muted">${c.day}</div></div>
+      <div><strong>${escapeHtml(c.name)}</strong><div class="muted">${escapeHtml(c.day)}</div></div>
       <label>Jours
-        <input type="number" min="1" max="100" step="1" value="${c.totalDays}" data-course-days="${c.id}">
+        <input type="number" min="1" max="100" step="1" value="${c.totalDays}" data-course-days="${escapeHtml(c.id)}">
       </label>
     </div>
   `).join("");
@@ -267,11 +304,7 @@ document.getElementById("closeScheduleBtn").addEventListener("click", () => {
   document.getElementById("scheduleDialog").close();
 });
 
-document.getElementById("addAttendanceBtn").addEventListener("click", () => {
-  document.getElementById("attendanceForm").reset();
-  document.getElementById("dateInput").value = todayIso();
-  document.getElementById("attendanceDialog").showModal();
-});
+document.getElementById("addAttendanceBtn").addEventListener("click", () => openAttendance());
 
 document.getElementById("closeAttendanceBtn").addEventListener("click", () => {
   document.getElementById("attendanceDialog").close();
@@ -291,8 +324,11 @@ document.getElementById("attendanceForm").addEventListener("submit", (ev) => {
   const date = document.getElementById("dateInput").value;
   const note = document.getElementById("noteInput").value.trim();
 
+  const collision = state.entries.find(e => e.courseId === courseId && e.date === date && e.id !== editingId);
+  if (collision && !confirm("Une séance existe déjà à cette date pour ce cours. La remplacer ?")) return;
+  const previous = snapshot();
   // Une seule entrée par cours et par date : si elle existe, on la remplace.
-  state.entries = state.entries.filter(e => !(e.courseId === courseId && e.date === date));
+  state.entries = state.entries.filter(e => e.id !== editingId && !(e.courseId === courseId && e.date === date));
   state.entries.push({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     courseId, date, status, note,
@@ -302,6 +338,7 @@ document.getElementById("attendanceForm").addEventListener("submit", (ev) => {
   saveState();
   document.getElementById("attendanceDialog").close();
   render();
+  notify("Séance enregistrée.", previous);
 });
 
 document.getElementById("settingsBtn").addEventListener("click", openCourseSettings);
@@ -329,10 +366,12 @@ document.getElementById("themeBtn").addEventListener("click", () => {
 });
 
 document.getElementById("clearHistoryBtn").addEventListener("click", () => {
-  if (confirm("Supprimer tout l’historique ? Cette action est irréversible.")) {
+  if (confirm("Effacer toutes les séances ? Vous pourrez annuler immédiatement cette action.")) {
+    const previous = snapshot();
     state.entries = [];
     saveState();
     render();
+    notify("Historique effacé.", previous);
   }
 });
 
@@ -342,7 +381,10 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   a.href = URL.createObjectURL(blob);
   a.download = `presence-cours-backup-${todayIso()}.json`;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  localStorage.setItem("presenceCours.lastBackup", todayIso());
+  render();
+  notify("Sauvegarde exportée. Conservez le fichier dans un endroit sûr.");
 });
 
 document.getElementById("importInput").addEventListener("change", async (ev) => {
@@ -350,26 +392,54 @@ document.getElementById("importInput").addEventListener("change", async (ev) => 
   if (!file) return;
   try {
     const parsed = JSON.parse(await file.text());
-    if (!Array.isArray(parsed.courses) || !Array.isArray(parsed.entries)) throw new Error();
+    if (!Array.isArray(parsed.courses) || !parsed.courses.length || !Array.isArray(parsed.entries)) throw new Error();
+    const ids = new Set();
+    for (const c of parsed.courses) {
+      if (typeof c.id !== "string" || ids.has(c.id) || !DEFAULT_COURSES.some(d => d.id === c.id) || typeof c.name !== "string" || typeof c.day !== "string" || !Number.isInteger(c.totalDays) || c.totalDays < 1 || c.totalDays > 100) throw new Error();
+      ids.add(c.id);
+    }
+    const entryIds = new Set(), sessions = new Set();
+    for (const e of parsed.entries) {
+      const session = `${e.courseId}/${e.date}`;
+      if (typeof e.id !== "string" || entryIds.has(e.id) || sessions.has(session) || !ids.has(e.courseId) || !Object.hasOwn(statusLabels, e.status) || typeof e.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e.date) || !Number.isFinite(Date.parse(e.date)) || new Date(e.date).toISOString().slice(0,10) !== e.date || typeof e.note !== "string" || typeof e.createdAt !== "string") throw new Error();
+      entryIds.add(e.id); sessions.add(session);
+    }
+    if (!confirm("Importer cette sauvegarde remplacera les cours et l’historique actuels. Continuer ?")) { ev.target.value = ""; return; }
     state = { courses: parsed.courses, entries: parsed.entries, dark: !!parsed.dark };
     saveState();
+    document.getElementById("resetFilters").click();
     render();
-    alert("Sauvegarde importée.");
+    notify("Sauvegarde importée. Les données précédentes ont été remplacées.");
   } catch {
     alert("Fichier de sauvegarde invalide.");
   }
   ev.target.value = "";
 });
 
-// V3 : pas de Service Worker afin d'éviter qu'une ancienne version reste bloquée en cache.
+document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importInput").click());
+document.querySelectorAll("[data-quarter]").forEach(button => button.addEventListener("click", () => {
+  selectedQuarter = button.dataset.quarter;
+  localStorage.setItem("presenceCours.quarter", selectedQuarter);
+  render();
+}));
+for (const id of ["historyCourse", "historyStatus", "historyDate"]) document.getElementById(id).addEventListener("change", renderHistory);
+document.getElementById("resetFilters").addEventListener("click", () => {
+  for (const id of ["historyCourse", "historyStatus", "historyDate"]) document.getElementById(id).value = "";
+  renderHistory();
+});
+document.getElementById("undoBtn").addEventListener("click", () => {
+  if (!undoEntries) return;
+  state.entries = undoEntries; saveState(); render(); notify("Modification annulée.");
+});
+document.getElementById("dismissNotice").addEventListener("click", () => { document.getElementById("notice").hidden = true; undoEntries = null; });
+function connectionStatus() {
+  document.getElementById("connectionStatus").textContent = navigator.onLine ? "En ligne" : "Hors ligne";
+}
+window.addEventListener("online", connectionStatus);
+window.addEventListener("offline", connectionStatus);
+connectionStatus();
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    registrations.forEach(registration => registration.unregister());
-  });
+  navigator.serviceWorker.register("./sw.js").catch(() => notify("Le mode hors ligne n’a pas pu être préparé. Réessayez en ligne."));
 }
-if ("caches" in window) {
-  caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
-}
-
 migrateCourseNames();
 render();

@@ -7,7 +7,7 @@
   <title>Présence Cours</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <header class="topbar">
@@ -18,6 +18,7 @@
     <button id="themeBtn" class="icon-btn" aria-label="Changer le thème">◐</button>
   </header>
 
+  <a class="skip-link" href="#coursesGrid">Aller aux cours</a>
   <main class="container">
     <section class="hero">
       <div>
@@ -28,13 +29,15 @@
         <button id="addAttendanceBtn" class="primary">+ Encoder une séance</button>
         <button id="scheduleBtn" class="secondary">Horaire</button>
         <button id="exportBtn" class="secondary">Exporter</button>
-        <label class="secondary file-label">
+        <button id="importBtn" class="secondary" type="button">Importer</button>
+        <label hidden>
           Importer
           <input id="importInput" type="file" accept="application/json" hidden />
         </label>
       </div>
     </section>
 
+    <aside class="backup-notice"><div><strong>Vos données restent sur cet appareil</strong><p id="backupStatus">Pensez à exporter une sauvegarde pour les conserver ou les transférer.</p></div><span id="connectionStatus" role="status"></span></aside>
     <section class="summary-grid" id="summaryGrid"></section>
 
     <section class="section-head">
@@ -45,7 +48,9 @@
       <button id="settingsBtn" class="secondary">Modifier les cours</button>
     </section>
 
-    <section id="coursesGrid" class="courses-grid"></section>
+    <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
+    <p class="muted">Les indicateurs ci-dessus concernent le quadrimestre sélectionné. Les absences justifiées sont exclues de la limite de 40 % ; vérifiez cette règle auprès de votre établissement.</p>
+    <section id="coursesGrid" tabindex="-1" class="courses-grid"></section>
 
     <section class="section-head">
       <div>
@@ -55,17 +60,19 @@
       <button id="clearHistoryBtn" class="danger-ghost">Effacer l’historique</button>
     </section>
 
-    <section class="history card">
+    <div class="history-filters"><label>Cours<select id="historyCourse"><option value="">Tous les cours</option></select></label><label>Statut<select id="historyStatus"><option value="">Tous les statuts</option><option value="present">Présent</option><option value="absent">Absent</option><option value="justified">Justifié</option><option value="cancelled">Annulé</option></select></label><label>Date<input id="historyDate" type="date"></label><button id="resetFilters" class="secondary">Réinitialiser</button></div>
+    <section class="history card" aria-label="Historique des séances">
       <div id="historyList"></div>
     </section>
+  <div id="notice" class="notice" hidden><span id="noticeText" role="status"></span><button id="undoBtn" class="secondary">Annuler</button><button id="dismissNotice" class="secondary" aria-label="Fermer la notification">×</button></div>
   </main>
 
-  <dialog id="attendanceDialog">
+  <dialog id="attendanceDialog" aria-labelledby="attendanceTitle">
     <form method="dialog" id="attendanceForm" class="dialog-card">
       <div class="dialog-head">
         <div>
           <p class="eyebrow">Nouvelle entrée</p>
-          <h2>Encoder une séance</h2>
+          <h2 id="attendanceTitle">Encoder une séance</h2>
         </div>
         <button type="button" class="icon-btn" id="closeAttendanceBtn" aria-label="Fermer" onclick="document.getElementById('attendanceDialog').close()">×</button>
       </div>
@@ -186,19 +193,20 @@
         <span class="risk-badge"></span>
       </div>
       <div class="metric-row">
-        <span>Présence actuelle</span>
+        <span>Présence sur les séances encodées</span>
         <strong class="presence-rate"></strong>
       </div>
       <div class="progress"><div class="progress-fill"></div></div>
       <div class="course-stats">
         <div><span>Absences</span><strong class="absence-count"></strong></div>
-        <div><span>Limite 40 %</span><strong class="absence-limit"></strong></div>
-        <div><span>Restantes</span><strong class="absence-left"></strong></div>
+        <div><span>Maximum (40 %)</span><strong class="absence-limit"></strong></div>
+        <div><span>Absences restantes</span><strong class="absence-left"></strong></div>
       </div>
+      <p class="absence-description"></p><div class="quick-actions"><button class="primary quick-present">Présent aujourd’hui</button><button class="secondary quick-absent">Absent aujourd’hui</button></div>
       <button class="secondary full details-btn">Voir le détail</button>
     </article>
   </template>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
