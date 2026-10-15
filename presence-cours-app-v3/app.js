@@ -947,3 +947,28 @@ function refreshDay() {
 window.addEventListener("focus", refreshDay);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshDay(); });
 setInterval(refreshDay, 60_000);
+
+// Animer le conteneur HTML : évite les différences de rendu des SVG externes.
+const brand = document.querySelector(".brand");
+const brandMark = brand.querySelector(".brand-mark");
+const logoMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+let logoAnimation;
+function playLogoAnimation() {
+  logoAnimation?.cancel();
+  const reduced = logoMotionPreference.matches;
+  logoAnimation = brandMark.animate(reduced ? [
+    { opacity: 1 }, { opacity: .45 }, { opacity: 1 }
+  ] : [
+    { transform: "translate(0, 0) rotate(0) scale(1)" },
+    { transform: "translate(0, 6px) scale(.92, .78)" },
+    { transform: "translate(-6px, -7px) rotate(-18deg) scale(1.08)" },
+    { transform: "translate(6px, -5px) rotate(18deg) scale(1.06)" },
+    { transform: "translate(0, -4px) rotate(0) scale(1.04)" },
+    { transform: "translate(0, 2px) scale(1.05, .94)" },
+    { transform: "translate(0, 0) rotate(0) scale(1)" }
+  ], { duration: reduced ? 600 : 1800, easing: "ease-in-out", iterations: 1 });
+}
+brand.addEventListener("pointerenter", playLogoAnimation);
+brandMark.addEventListener("focus", playLogoAnimation);
+brandMark.addEventListener("click", playLogoAnimation);
+logoMotionPreference.addEventListener("change", () => logoAnimation?.cancel());

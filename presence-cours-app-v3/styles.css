@@ -64,7 +64,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 [hidden] { display: none !important; }
 .topbar { max-width: 1320px; margin: auto; padding: 18px 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px; border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; color: var(--text); }
+.brand-mark { padding: 0; border: 0; background: transparent; border-radius: 0; transform-origin: 50% 80%; display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; color: var(--text); }
 .brand-mark svg { display: block; width: 48px; height: 48px; fill: currentColor; }
 .topbar h1 { font-size: 1.25rem; margin: 0; font-weight: 650; letter-spacing: -.035em; line-height: 1.25; }
 .topbar .eyebrow { font-size: .61rem; margin-bottom: 2px; }
@@ -307,23 +307,11 @@ button:not(:disabled):active, .schedule-link:active, .tools-menu summary:active,
 .brand-mark svg { transform-origin: 50% 80%; }
 .tools-menu[open] .tools-panel { animation: menu-arrival .18s ease-out; }
 .notice:not([hidden]) { animation: state-arrival .2s ease-out; }
-/* Le personnage se baisse, surgit puis regarde de chaque côté. */
-@keyframes logo-lookout {
-  0%, 8%, 100% { transform: translate(0, 0) rotate(0) scale(1); }
-  18% { transform: translate(0, 6px) rotate(0) scale(.92, .78); }
-  30% { transform: translate(-6px, -7px) rotate(-18deg) scale(1.06, 1.12); }
-  40% { transform: translate(-5px, -3px) rotate(-14deg) scale(1); }
-  52% { transform: translate(6px, -5px) rotate(18deg) scale(1.04, 1.06); }
-  62% { transform: translate(5px, -2px) rotate(14deg) scale(1); }
-  74% { transform: translate(0, -4px) rotate(0) scale(1.04); }
-  82% { transform: translate(0, 2px) rotate(0) scale(1.05, .94); }
-  90% { transform: translate(0, 0) rotate(0) scale(1); }
-}
 @keyframes menu-arrival {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.brand:hover .brand-mark svg { animation: logo-lookout 2.4s cubic-bezier(.45, 0, .25, 1) infinite; }
+
 @media (hover: hover) and (pointer: fine) {
   :is(.primary, .secondary, .icon-btn, .schedule-link, .tools-menu summary, .back-to-top):not(:disabled):hover {
     transform: translateY(-2px);
