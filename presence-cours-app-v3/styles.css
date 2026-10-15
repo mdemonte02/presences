@@ -287,3 +287,34 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .batch-table input[type="text"] { min-width: 140px; }
 .batch-table select, .batch-table input[type="text"] { margin: 0; }
 button:disabled { opacity: .5; cursor: default; }
+
+.courses-tools, .report-actions, .history-bulk { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.courses-tools { justify-content: flex-end; }
+#overviewDialog { max-width: min(96vw, 1240px); }
+#exceptionsDialog, #missingDialog { max-width: min(94vw, 850px); }
+.report-table { border-collapse: collapse; width: 100%; text-align: left; }
+.report-table caption { text-align: left; padding: 12px 0; color: var(--muted); }
+.report-table th, .report-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); }
+.report-table td { font-variant-numeric: tabular-nums; }
+.report-table thead button { background: transparent; color: var(--text); padding: 8px 0; text-align: left; }
+.report-table [aria-sort="ascending"] button::after { content: " ↑"; }
+.report-table [aria-sort="descending"] button::after { content: " ↓"; }
+.report-table tbody th { font-size: .9rem; }
+.missing-row, .exception-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-top: 1px solid var(--border); padding: 12px 0; }
+#missingBtn { margin-top: 12px; }
+.history-select { display: flex; align-items: center; gap: 8px; }
+.history-select input, .history-bulk input, .inline-check input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--text); }
+.history-bulk label, .inline-check { display: flex !important; align-items: center; gap: 8px; }
+#bulkSelection { max-height: 220px; overflow-y: auto; font-size: .9rem; }
+@media print {
+  @page { size: A4 landscape; margin: 15mm; }
+  html, body { min-height: 0 !important; height: auto !important; }
+  body { background: white !important; color: black !important; }
+  dialog::backdrop { background: transparent !important; backdrop-filter: none !important; }
+  body > * { display: none !important; }
+  #printReport { display: block !important; font-size: 10pt; }
+  #printReport table { border-collapse: collapse; width: 100%; text-align: left; }
+  #printReport th, #printReport td { border: 1px solid #aaa; padding: 8px; }
+  #printReport thead { display: table-header-group; }
+  #printReport tr { break-inside: avoid; }
+}

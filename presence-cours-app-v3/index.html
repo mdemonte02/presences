@@ -7,7 +7,7 @@
   <title>Présence Cours</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <header class="topbar">
@@ -48,10 +48,12 @@
       <button id="settingsBtn" class="secondary">Réglages de l’horaire</button>
     </section>
 
+    <div class="courses-tools"><button id="overviewBtn" class="secondary">Tableau de bord</button><button id="exceptionsBtn" class="secondary">Changements ponctuels</button></div>
     <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
     <section class="today-panel card" aria-labelledby="todayTitle">
       <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><span id="todayDate" class="muted"></span></div>
       <div id="todayCourses"></div>
+      <button id="missingBtn" class="secondary">Séances à vérifier</button>
     </section>
     <section id="coursesGrid" tabindex="-1" class="courses-grid"></section>
 
@@ -64,6 +66,7 @@
     </section>
 
     <div class="history-filters"><label>Cours<select id="historyCourse"><option value="">Tous les cours</option></select></label><label>Statut<select id="historyStatus"><option value="">Tous les statuts</option><option value="present">Présent</option><option value="absent">Absent</option><option value="justified">Justifié</option><option value="cancelled">Annulé</option></select></label><label>Date<input id="historyDate" type="date"></label><button id="resetFilters" class="secondary">Réinitialiser</button></div>
+    <div class="history-bulk"><label><input type="checkbox" id="selectHistory"> Sélectionner les séances affichées</label><button id="bulkEditBtn" class="secondary" disabled>Corriger la sélection (0)</button></div>
     <section class="history card" aria-label="Historique des séances">
       <div id="historyList"></div>
     </section>
@@ -208,6 +211,61 @@
     </form>
   </dialog>
 
+  <dialog id="exceptionsDialog" aria-labelledby="exceptionsTitle">
+    <div class="dialog-card">
+      <div class="dialog-head"><h2 id="exceptionsTitle">Changements ponctuels</h2><button type="button" class="icon-btn" data-close="exceptionsDialog" aria-label="Fermer">×</button></div>
+      <p class="muted">Ces changements modifient le planning. Les séances déjà encodées restent dans l’historique.</p>
+      <form id="exceptionForm">
+        <label>Cours<select id="exceptionCourse" required></select></label>
+        <div class="settings-controls"><label>Date prévue<input type="date" id="exceptionDate" required></label><label>Changement<select id="exceptionAction"><option value="cancel">Annuler ce cours</option><option value="move">Déplacer ce cours</option></select></label></div>
+        <label id="exceptionTargetLabel" hidden>Nouvelle date<input type="date" id="exceptionTarget"></label>
+        <p id="exceptionError" class="form-error" role="alert"></p>
+        <div class="dialog-actions"><button class="primary" type="submit">Enregistrer le changement</button></div>
+      </form>
+      <h3>Changements enregistrés</h3><div id="exceptionsList"></div>
+    </div>
+  </dialog>
+
+  <dialog id="overviewDialog" aria-labelledby="overviewTitle">
+    <div class="dialog-card">
+      <div class="dialog-head"><h2 id="overviewTitle">Tableau de bord</h2><button type="button" class="icon-btn" data-close="overviewDialog" aria-label="Fermer">×</button></div>
+      <div class="report-actions"><button id="csvSummaryBtn" class="secondary">Exporter le bilan CSV</button><button id="csvHistoryBtn" class="secondary">Exporter les séances CSV</button><button id="printReportBtn" class="primary">Imprimer le bilan</button></div>
+      <div class="table-wrap"><table class="report-table"><caption id="reportCaption"></caption><thead><tr>
+        <th scope="col" data-sort-header="name"><button data-sort="name">Cours</button></th>
+        <th scope="col" data-sort-header="present"><button data-sort="present">Présences</button></th>
+        <th scope="col" data-sort-header="justified"><button data-sort="justified">Justifiées</button></th>
+        <th scope="col" data-sort-header="absent"><button data-sort="absent">Injustifiées</button></th>
+        <th scope="col" data-sort-header="cancelled"><button data-sort="cancelled">Annulées</button></th>
+        <th scope="col" data-sort-header="presenceRate"><button data-sort="presenceRate">Taux de présence</button></th>
+        <th scope="col" data-sort-header="limit"><button data-sort="limit">Maximum</button></th>
+        <th scope="col" data-sort-header="left"><button data-sort="left">Restantes</button></th>
+      </tr></thead><tbody id="reportRows"></tbody></table></div>
+    </div>
+  </dialog>
+
+  <dialog id="missingDialog" aria-labelledby="missingTitle">
+    <div class="dialog-card">
+      <div class="dialog-head"><h2 id="missingTitle">Séances à vérifier</h2><button type="button" class="icon-btn" data-close="missingDialog" aria-label="Fermer">×</button></div>
+      <p class="muted">Séances passées prévues au planning et non encodées. Elles ne sont jamais comptées automatiquement comme des absences.</p>
+      <div class="period-filters"><label>Du<input type="date" id="missingStart"></label><label>Au<input type="date" id="missingEnd"></label></div>
+      <p id="missingError" class="form-error" role="alert"></p><div id="missingList"></div>
+    </div>
+  </dialog>
+
+  <dialog id="bulkEditDialog" aria-labelledby="bulkEditTitle">
+    <form id="bulkEditForm" class="dialog-card">
+      <div class="dialog-head"><h2 id="bulkEditTitle">Corriger les séances</h2><button type="button" class="icon-btn" data-close="bulkEditDialog" aria-label="Fermer">×</button></div>
+      <div id="bulkSelection"></div>
+      <label>Nouveau statut<select id="bulkStatus" required><option value="">Choisir un statut</option><option value="present">Présent</option><option value="justified">Justifié</option><option value="absent">Absent</option><option value="cancelled">Annulé</option></select></label>
+      <label class="inline-check"><input type="checkbox" id="bulkReplaceNote"> Remplacer aussi les notes</label>
+      <label id="bulkNoteLabel" hidden>Nouvelle note (vide pour effacer)<input type="text" id="bulkNote" maxlength="120"></label>
+      <p id="bulkError" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" class="secondary" data-close="bulkEditDialog">Annuler</button><button type="submit" class="primary">Appliquer la correction</button></div>
+    </form>
+  </dialog>
+
+  <section id="printReport" hidden aria-label="Bilan imprimable"></section>
+
   <template id="courseCardTemplate">
     <article class="course-card card">
       <div class="course-card-top">
@@ -232,7 +290,7 @@
     </article>
   </template>
 
-  <script src="planning.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="planning.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

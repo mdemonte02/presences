@@ -25,6 +25,9 @@ let selectedQuarter = localStorage.getItem("presenceCours.quarter") === "Q2" ? "
 let editingId = null;
 let undoEntries = null;
 let detailsCourseId = null;
+const historySelection = new Set();
+let visibleHistoryIds = [];
+let reportSort = { key: "name", direction: "asc" };
 function visibleCourses() { return state.courses.filter(c => Planning.quarterOf(c) === selectedQuarter); }
 function notify(message, previous = null) {
   undoEntries = previous;
@@ -33,12 +36,12 @@ function notify(message, previous = null) {
   document.getElementById("notice").hidden = false;
 }
 function snapshot() { return structuredClone(state.entries); }
-function openAttendance(entry = null) {
+function openAttendance(entry = null, defaults = {}) {
   editingId = entry?.id ?? null;
   document.getElementById("attendanceForm").reset();
   document.getElementById("attendanceTitle").textContent = entry ? "Modifier la séance" : "Encoder une séance";
-  document.getElementById("dateInput").value = entry?.date ?? todayIso();
-  document.getElementById("courseSelect").value = entry?.courseId ?? visibleCourses()[0]?.id ?? state.courses[0]?.id;
+  document.getElementById("dateInput").value = entry?.date ?? defaults.date ?? todayIso();
+  document.getElementById("courseSelect").value = entry?.courseId ?? defaults.courseId ?? visibleCourses()[0]?.id ?? state.courses[0]?.id;
   document.getElementById("noteInput").value = entry?.note ?? "";
   if (entry) document.querySelector(`input[name="status"][value="${entry.status}"]`).checked = true;
   document.getElementById("attendanceDialog").showModal();
@@ -62,7 +65,7 @@ function loadState() {
   try {
     const parsed = JSON.parse(saved);
     let calendar = Planning.emptyCalendar();
-    try { if (parsed.calendar) calendar = Planning.validateCalendar(parsed.calendar); } catch { /* Préserver les séances si seul le calendrier local est endommagé. */ }
+    try { if (parsed.calendar) { Planning.validateCalendar(parsed.calendar); Planning.validateExceptions(parsed.calendar, parsed.courses ?? DEFAULT_COURSES); calendar = parsed.calendar; } } catch { /* Préserver les séances si seul le calendrier local est endommagé. */ }
     return {
       courses: Array.isArray(parsed.courses) ? parsed.courses : structuredClone(DEFAULT_COURSES),
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
@@ -156,6 +159,9 @@ function render() {
   renderToday();
   renderCourses();
   renderHistory();
+  renderMissingBadge();
+  if (document.getElementById("overviewDialog").open) renderReport();
+  if (document.getElementById("missingDialog").open) renderMissing();
   populateCourseSelect();
 }
 
@@ -261,6 +267,9 @@ function renderHistory() {
   const dateFilter = document.getElementById("historyDate").value;
   const entries = state.entries.filter(e => (!courseFilter || e.courseId === courseFilter) && (!statusFilter || e.status === statusFilter) && (!dateFilter || e.date === dateFilter)).sort((a,b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt));
 
+  visibleHistoryIds = entries.map(e => e.id);
+  for (const id of historySelection) if (!visibleHistoryIds.includes(id)) historySelection.delete(id);
+  updateHistorySelection();
   if (!entries.length) {
     list.innerHTML = `<div class="empty">Aucune séance à afficher. Encodez une séance ou ajustez les filtres.</div>`;
     return;
@@ -270,7 +279,7 @@ function renderHistory() {
     const course = state.courses.find(c => c.id === e.courseId);
     return `
       <div class="history-item">
-        <span class="history-date">${formatDate(e.date)}</span>
+        <span class="history-date history-select"><input type="checkbox" data-history-select="${escapeHtml(e.id)}" aria-label="Sélectionner ${escapeHtml(course?.name ?? "Cours")} du ${escapeHtml(formatDate(e.date))}" ${historySelection.has(e.id) ? "checked" : ""}>${formatDate(e.date)}</span>
         <div>
           <div class="history-course">${escapeHtml(course?.name ?? "Cours supprimé")}</div>
           ${e.note ? `<div class="muted">${escapeHtml(e.note)}</div>` : ""}
@@ -398,6 +407,84 @@ function escapeHtml(text) {
 }
 
 
+function reportData() {
+  return Planning.sortReport(Planning.courseReport(visibleCourses(), state.entries), reportSort.key, reportSort.direction);
+}
+function reportTable(rows) {
+  return rows.map(row => `<tr><th scope="row">${escapeHtml(row.name)}</th>${[row.present, row.justified, row.absent, row.cancelled, row.presenceRate === null ? "—" : row.presenceRate + "%", row.limit, row.left].map(value => `<td>${value}</td>`).join("")}</tr>`).join("");
+}
+function renderReport() {
+  document.getElementById("overviewTitle").textContent = `Tableau de bord · ${selectedQuarter}`;
+  document.getElementById("reportCaption").textContent = `Bilan des cours · ${selectedQuarter}`;
+  document.getElementById("reportRows").innerHTML = reportTable(reportData());
+  document.querySelectorAll("[data-sort-header]").forEach(header => {
+    header.setAttribute("aria-sort", header.dataset.sortHeader === reportSort.key ? (reportSort.direction === "asc" ? "ascending" : "descending") : "none");
+  });
+}
+function downloadText(contents, type, filename) {
+  const url = URL.createObjectURL(new Blob([contents], { type }));
+  const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function missingDefaults() {
+  const yesterday = new Date(todayIso() + "T12:00:00Z"); yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const end = yesterday.toISOString().slice(0, 10);
+  const startDate = new Date(end + "T12:00:00Z"); startDate.setUTCDate(startDate.getUTCDate() - 29);
+  const recent = startDate.toISOString().slice(0, 10);
+  const quarterStart = state.calendar.quarters[selectedQuarter].start;
+  return { start: quarterStart && quarterStart > recent ? quarterStart : recent, end };
+}
+function renderMissingBadge() {
+  const range = missingDefaults();
+  const count = range.start <= range.end ? Planning.missingSessions(state.courses, state.calendar, selectedQuarter, state.entries, range.start, range.end, todayIso()).length : 0;
+  document.getElementById("missingBtn").textContent = count ? `Séances à vérifier (${count})` : "Séances à vérifier";
+}
+function renderMissing() {
+  const list = document.getElementById("missingList");
+  list.replaceChildren();
+  document.getElementById("missingError").textContent = "";
+  let sessions;
+  try { sessions = Planning.missingSessions(state.courses, state.calendar, selectedQuarter, state.entries, document.getElementById("missingStart").value, document.getElementById("missingEnd").value, todayIso()); }
+  catch (error) { document.getElementById("missingError").textContent = error.message; return; }
+  if (!sessions.length) { list.innerHTML = '<p class="muted">Aucune séance non encodée sur cette période.</p>'; return; }
+  sessions.forEach(session => {
+    const course = state.courses.find(c => c.id === session.courseId);
+    const row = document.createElement("div"); row.className = "missing-row";
+    const label = document.createElement("span"); label.textContent = `${formatDate(session.date)} · ${course.name}`;
+    const button = document.createElement("button"); button.className = "secondary"; button.textContent = "Encoder";
+    button.setAttribute("aria-label", `Encoder ${course.name} du ${formatDate(session.date)}`);
+    button.addEventListener("click", () => { document.getElementById("missingDialog").close(); openAttendance(null, session); });
+    row.append(label, button); list.appendChild(row);
+  });
+}
+function renderExceptions() {
+  const list = document.getElementById("exceptionsList"); list.replaceChildren();
+  const exceptions = state.calendar.exceptions ?? [];
+  if (!exceptions.length) list.innerHTML = '<p class="muted">Aucun changement enregistré.</p>';
+  [...exceptions].sort((a,b) => a.date.localeCompare(b.date)).forEach(item => {
+    const row = document.createElement("div"); row.className = "exception-row";
+    const label = document.createElement("span");
+    label.textContent = `${state.courses.find(c => c.id === item.courseId).name} · ${formatDate(item.date)} · ${item.action === "cancel" ? "Annulé" : "Déplacé au " + formatDate(item.targetDate)}`;
+    const button = document.createElement("button"); button.className = "secondary"; button.textContent = "Retirer";
+    button.setAttribute("aria-label", `Retirer le changement : ${label.textContent}`);
+    button.addEventListener("click", () => {
+      const previous = structuredClone(state.calendar);
+      state.calendar.exceptions = exceptions.filter(e => e !== item); saveState(); render(); renderExceptions();
+      notify("Changement retiré du planning.", { calendar: previous });
+    });
+    row.append(label, button); list.appendChild(row);
+  });
+}
+function updateHistorySelection() {
+  const count = historySelection.size;
+  document.getElementById("bulkEditBtn").textContent = `Corriger la sélection (${count})`;
+  document.getElementById("bulkEditBtn").disabled = !count;
+  const all = document.getElementById("selectHistory");
+  all.disabled = !visibleHistoryIds.length;
+  all.checked = !!count && count === visibleHistoryIds.length;
+  all.indeterminate = !!count && count < visibleHistoryIds.length;
+}
+
 document.getElementById("scheduleBtn").addEventListener("click", () => {
   document.getElementById("scheduleDialog").showModal();
 });
@@ -449,7 +536,7 @@ document.getElementById("cancelCourseBtn").addEventListener("click", () => docum
 
 document.getElementById("courseForm").addEventListener("submit", (ev) => {
   ev.preventDefault();
-  const calendar = { quarters: {}, holidays: [] };
+  const calendar = { quarters: {}, holidays: [], exceptions: structuredClone(state.calendar.exceptions ?? []) };
   for (const key of ["Q1", "Q2"]) calendar.quarters[key] = { start: document.getElementById(`${key}Start`).value, end: document.getElementById(`${key}End`).value };
   calendar.holidays = [...document.querySelectorAll(".holiday-row")].map(row => ({ label: row.querySelector("[data-holiday-label]").value.trim(), start: row.querySelector("[data-holiday-start]").value, end: row.querySelector("[data-holiday-end]").value }));
   try { Planning.validateCalendar(calendar); }
@@ -458,6 +545,8 @@ document.getElementById("courseForm").addEventListener("submit", (ev) => {
     const row = [...document.querySelectorAll("[data-course]")].find(row => row.dataset.course === course.id);
     return { ...course, quarter: row.querySelector("[data-course-quarter]").value, totalDays: Number(row.querySelector("[data-course-days]").value), day: [...row.querySelectorAll("[data-weekday]:checked")].map(input => input.value).join(" / ") };
   });
+  try { Planning.validateExceptions(calendar, courses); }
+  catch (error) { document.getElementById("settingsError").textContent = "Vérifiez les changements ponctuels : " + error.message; return; }
   state.calendar = calendar;
   state.courses = courses;
   saveState();
@@ -514,6 +603,7 @@ document.getElementById("importInput").addEventListener("change", async (ev) => 
       entryIds.add(e.id); sessions.add(session);
     }
     const calendar = parsed.calendar ? Planning.validateCalendar(parsed.calendar) : Planning.emptyCalendar();
+    Planning.validateExceptions(calendar, parsed.courses);
     if (!confirm("Importer cette sauvegarde remplacera les cours et l’historique actuels. Continuer ?")) { ev.target.value = ""; return; }
     state = { courses: parsed.courses, entries: parsed.entries, dark: !!parsed.dark, calendar };
     saveState();
@@ -532,14 +622,19 @@ document.querySelectorAll("[data-quarter]").forEach(button => button.addEventLis
   localStorage.setItem("presenceCours.quarter", selectedQuarter);
   render();
 }));
-for (const id of ["historyCourse", "historyStatus", "historyDate"]) document.getElementById(id).addEventListener("change", renderHistory);
+for (const id of ["historyCourse", "historyStatus", "historyDate"]) document.getElementById(id).addEventListener("change", () => { historySelection.clear(); renderHistory(); });
 document.getElementById("resetFilters").addEventListener("click", () => {
+  historySelection.clear();
   for (const id of ["historyCourse", "historyStatus", "historyDate"]) document.getElementById(id).value = "";
   renderHistory();
 });
 document.getElementById("undoBtn").addEventListener("click", () => {
   if (!undoEntries) return;
-  state.entries = undoEntries; saveState(); render(); notify("Modification annulée.");
+  if (Array.isArray(undoEntries)) state.entries = undoEntries;
+  else if (undoEntries.calendar) state.calendar = undoEntries.calendar;
+  saveState(); render();
+  if (document.getElementById("exceptionsDialog").open) renderExceptions();
+  notify("Modification annulée.");
 });
 document.getElementById("dismissNotice").addEventListener("click", () => { document.getElementById("notice").hidden = true; undoEntries = null; });
 document.getElementById("addHolidayBtn").addEventListener("click", () => {
@@ -571,6 +666,90 @@ document.getElementById("batchForm").addEventListener("submit", event => {
   state.entries = next; saveState(); render();
   document.getElementById("batchDialog").close();
   notify(`${rows.length} séance(s) enregistrée(s).`, previous);
+});
+document.querySelectorAll("[data-close]").forEach(button => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
+document.getElementById("overviewBtn").addEventListener("click", () => { renderReport(); document.getElementById("overviewDialog").showModal(); });
+document.querySelectorAll("[data-sort]").forEach(button => button.addEventListener("click", () => {
+  const key = button.dataset.sort;
+  reportSort = { key, direction: key === reportSort.key && reportSort.direction === "asc" ? "desc" : "asc" }; renderReport();
+}));
+document.getElementById("csvSummaryBtn").addEventListener("click", () => {
+  const rows = [["Cours", "Quadrimestre", "Présences", "Justifiées", "Injustifiées", "Annulées", "Taux de présence (%)", "Maximum d’absences", "Absences restantes"], ...reportData().map(row => [row.name, selectedQuarter, row.present, row.justified, row.absent, row.cancelled, row.presenceRate === null ? "" : String(row.presenceRate).replace(".", ","), row.limit, row.left])];
+  downloadText(Planning.toCsv(rows), "text/csv;charset=utf-8", `bilan-${selectedQuarter}-${todayIso()}.csv`);
+});
+document.getElementById("csvHistoryBtn").addEventListener("click", () => {
+  const courses = visibleCourses();
+  const entries = state.entries.filter(e => courses.some(c => c.id === e.courseId)).sort((a,b) => a.date.localeCompare(b.date));
+  const rows = [["Date", "Cours", "Statut", "Note"], ...entries.map(e => [e.date, courses.find(c => c.id === e.courseId).name, statusLabels[e.status], e.note])];
+  downloadText(Planning.toCsv(rows), "text/csv;charset=utf-8", `seances-${selectedQuarter}-${todayIso()}.csv`);
+});
+document.getElementById("printReportBtn").addEventListener("click", () => {
+  const report = document.getElementById("printReport");
+  report.innerHTML = `<h1>Présence Cours · ${selectedQuarter}</h1><p>Bilan au ${formatDate(todayIso())}</p><table><thead><tr>${["Cours", "Présences", "Justifiées", "Injustifiées", "Annulées", "Taux", "Maximum", "Restantes"].map(label => `<th scope="col">${label}</th>`).join("")}</tr></thead><tbody>${reportTable(reportData())}</tbody></table>`;
+  window.print();
+});
+document.getElementById("missingBtn").addEventListener("click", () => {
+  const range = missingDefaults();
+  document.getElementById("missingStart").value = range.start > range.end ? range.end : range.start;
+  document.getElementById("missingEnd").value = range.end;
+  renderMissing(); document.getElementById("missingDialog").showModal();
+});
+for (const id of ["missingStart", "missingEnd"]) document.getElementById(id).addEventListener("change", renderMissing);
+document.getElementById("exceptionsBtn").addEventListener("click", () => {
+  document.getElementById("exceptionForm").reset();
+  document.getElementById("exceptionCourse").innerHTML = state.courses.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+  document.getElementById("exceptionDate").value = todayIso();
+  document.getElementById("exceptionTargetLabel").hidden = true; document.getElementById("exceptionTarget").required = false;
+  document.getElementById("exceptionError").textContent = "";
+  renderExceptions(); document.getElementById("exceptionsDialog").showModal();
+});
+document.getElementById("exceptionAction").addEventListener("change", event => {
+  const move = event.target.value === "move";
+  document.getElementById("exceptionTargetLabel").hidden = !move;
+  document.getElementById("exceptionTarget").required = move;
+});
+document.getElementById("exceptionForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const item = { courseId: document.getElementById("exceptionCourse").value, date: document.getElementById("exceptionDate").value, action: document.getElementById("exceptionAction").value, targetDate: document.getElementById("exceptionTarget").value };
+  const previous = structuredClone(state.calendar);
+  const calendar = structuredClone(state.calendar);
+  calendar.exceptions = [...(calendar.exceptions ?? []).filter(e => !(e.courseId === item.courseId && e.date === item.date)), item];
+  try { Planning.validateExceptions(calendar, state.courses); }
+  catch (error) { document.getElementById("exceptionError").textContent = error.message; return; }
+  state.calendar = calendar; saveState(); render(); renderExceptions();
+  document.getElementById("exceptionError").textContent = "";
+  notify("Changement enregistré dans le planning.", { calendar: previous });
+});
+document.getElementById("historyList").addEventListener("change", event => {
+  const id = event.target.dataset.historySelect; if (!id) return;
+  if (event.target.checked) historySelection.add(id); else historySelection.delete(id);
+  updateHistorySelection();
+});
+document.getElementById("selectHistory").addEventListener("change", event => {
+  historySelection.clear(); if (event.target.checked) visibleHistoryIds.forEach(id => historySelection.add(id)); renderHistory();
+});
+document.getElementById("bulkEditBtn").addEventListener("click", () => {
+  document.getElementById("bulkEditForm").reset(); document.getElementById("bulkNoteLabel").hidden = true;
+  document.getElementById("bulkError").textContent = "";
+  document.getElementById("bulkSelection").replaceChildren();
+  state.entries.filter(e => historySelection.has(e.id)).forEach(e => {
+    const row = document.createElement("p"); row.textContent = `${formatDate(e.date)} · ${state.courses.find(c => c.id === e.courseId)?.name ?? "Cours"} · ${statusLabels[e.status]}`;
+    document.getElementById("bulkSelection").appendChild(row);
+  });
+  document.getElementById("bulkEditDialog").showModal();
+});
+document.getElementById("bulkReplaceNote").addEventListener("change", event => { document.getElementById("bulkNoteLabel").hidden = !event.target.checked; });
+document.getElementById("bulkEditForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const patch = { status: document.getElementById("bulkStatus").value };
+  if (document.getElementById("bulkReplaceNote").checked) patch.note = document.getElementById("bulkNote").value.trim();
+  const previous = snapshot();
+  let next;
+  try { next = Planning.updateEntries(state.entries, [...historySelection], patch); }
+  catch (error) { document.getElementById("bulkError").textContent = error.message; return; }
+  if (!confirm(`Appliquer « ${statusLabels[patch.status]} » à ${historySelection.size} séance(s) sélectionnée(s) ?`)) return;
+  state.entries = next; historySelection.clear(); saveState(); render();
+  document.getElementById("bulkEditDialog").close(); notify("Séances corrigées.", previous);
 });
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => notify("Le mode hors ligne n’a pas pu être préparé. Réessayez en ligne."));
