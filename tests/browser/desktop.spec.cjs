@@ -172,3 +172,20 @@ test('un calendrier local endommagé ne supprime pas les présences existantes',
   await page.reload();
   await expect(page.locator('#historyList .history-item')).toHaveCount(1);
 });
+
+test('présentation sombre par défaut et choix du thème mémorisé sans perte de séances', async ({ page }) => {
+  await expect(page.locator('body')).toHaveClass('dark');
+  await expect(page.locator('#themeBtn')).toHaveAccessibleName('Activer le thème clair');
+  await page.locator('#coursesGrid .quick-present').first().click();
+  const entries = (await readState(page)).entries;
+  await page.locator('#themeBtn').click();
+  await expect(page.locator('body')).not.toHaveClass('dark');
+  await page.reload();
+  await expect(page.locator('body')).not.toHaveClass('dark');
+  expect((await readState(page)).entries).toEqual(entries);
+  await page.locator('#themeBtn').click();
+  await page.reload();
+  await expect(page.locator('body')).toHaveClass('dark');
+  await expect(page.locator('#historyList .history-item')).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();
+});

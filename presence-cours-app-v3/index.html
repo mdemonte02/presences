@@ -7,15 +7,15 @@
   <title>Présence Cours</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
-<body>
+<body class="dark">
   <header class="topbar">
-    <div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">PC</span><div>
       <p class="eyebrow">IETC · Bac 2</p>
       <h1>Présence Cours</h1>
-    </div>
-    <button id="themeBtn" class="icon-btn" aria-label="Changer le thème">◐</button>
+    </div></div>
+    <nav class="topbar-actions" aria-label="Navigation principale"><a href="#coursesHeading">Mes cours</a><a href="#historyHeading">Historique</a><button id="themeBtn" class="icon-btn" aria-label="Activer le thème clair">☀</button></nav>
   </header>
 
   <a class="skip-link" href="#coursesGrid">Aller aux cours</a>
@@ -26,15 +26,15 @@
         <h2>Informatique de gestion</h2>
       </div>
       <div class="hero-actions">
-        <button id="addAttendanceBtn" class="primary">+ Encoder une séance</button>
-        <button id="batchBtn" class="secondary">Encoder une journée</button>
-        <button id="scheduleBtn" class="secondary">Horaire</button>
+        <div class="attendance-actions"><button id="addAttendanceBtn" class="primary">+ Encoder une séance</button>
+        <button id="batchBtn" class="secondary">Encoder une journée</button></div>
+        <div class="utility-actions"><button id="scheduleBtn" class="secondary">Horaire</button>
         <button id="exportBtn" class="secondary">Exporter</button>
         <button id="importBtn" class="secondary" type="button">Importer</button>
         <label hidden>
           Importer
           <input id="importInput" type="file" accept="application/json" hidden />
-        </label>
+        </label></div>
       </div>
     </section>
 
@@ -43,24 +43,24 @@
     <section class="section-head">
       <div>
         <p class="eyebrow">Matières</p>
-        <h2>Mes cours</h2>
+        <h2 id="coursesHeading">Mes cours</h2>
       </div>
-      <button id="settingsBtn" class="secondary">Réglages de l’horaire</button>
     </section>
 
-    <div class="courses-tools"><button id="overviewBtn" class="secondary">Tableau de bord</button><button id="exceptionsBtn" class="secondary">Changements ponctuels</button></div>
-    <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
+    <div class="course-toolbar">
+      <nav class="quarter-tabs" aria-label="Quadrimestre"><button data-quarter="Q1" aria-pressed="true">Q1</button><button data-quarter="Q2" aria-pressed="false">Q2</button></nav>
+      <div class="courses-tools"><button id="overviewBtn" class="secondary">Tableau de bord</button><button id="exceptionsBtn" class="secondary">Changements ponctuels</button><button id="settingsBtn" class="secondary">Réglages de l’horaire</button></div>
+    </div>
     <section class="today-panel card" aria-labelledby="todayTitle">
-      <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><span id="todayDate" class="muted"></span></div>
+      <div class="section-head"><h2 id="todayTitle">Aujourd’hui</h2><div class="today-meta"><span id="todayDate" class="muted"></span><button id="missingBtn" class="secondary">Séances à vérifier</button></div></div>
       <div id="todayCourses"></div>
-      <button id="missingBtn" class="secondary">Séances à vérifier</button>
     </section>
     <section id="coursesGrid" tabindex="-1" class="courses-grid"></section>
 
     <section class="section-head">
       <div>
         <p class="eyebrow">Historique</p>
-        <h2>Dernières séances</h2>
+        <h2 id="historyHeading">Dernières séances</h2>
       </div>
       <button id="clearHistoryBtn" class="danger-ghost">Effacer l’historique</button>
     </section>
@@ -290,7 +290,7 @@
     </article>
   </template>
 
-  <script src="planning.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="planning.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
