@@ -47,41 +47,21 @@ function decorateButtons(root = document) {
 function visibleCourses() { return state.courses.filter(c => Planning.quarterOf(c) === selectedQuarter); }
 const notice = document.getElementById("notice");
 let noticeTimer = null;
-let noticeRemaining = 5000;
-let noticeStarted = 0;
 function dismissNotice() {
   clearTimeout(noticeTimer);
   noticeTimer = null;
   notice.hidden = true;
   undoEntries = null;
 }
-function pauseNotice() {
-  if (noticeTimer === null) return;
-  clearTimeout(noticeTimer);
-  noticeTimer = null;
-  noticeRemaining = Math.max(0, noticeRemaining - (Date.now() - noticeStarted));
-}
-function resumeNotice() {
-  if (notice.hidden || noticeTimer !== null || notice.matches(":hover") || notice.contains(document.activeElement)) return;
-  noticeStarted = Date.now();
-  noticeTimer = setTimeout(dismissNotice, noticeRemaining);
-}
 function notify(message, previous = null) {
   clearTimeout(noticeTimer);
-  noticeTimer = null;
-  noticeRemaining = 5000;
   undoEntries = previous;
   document.getElementById("noticeText").textContent = message;
   document.getElementById("undoBtn").hidden = !previous;
   notice.hidden = false;
-  resumeNotice();
+  // Toujours fermer, même si la souris ou le focus reste sur le message.
+  noticeTimer = setTimeout(dismissNotice, 5000);
 }
-notice.addEventListener("pointerenter", pauseNotice);
-notice.addEventListener("pointerleave", resumeNotice);
-notice.addEventListener("focusin", pauseNotice);
-notice.addEventListener("focusout", event => {
-  if (!notice.contains(event.relatedTarget)) queueMicrotask(resumeNotice);
-});
 function snapshot() { return structuredClone(state.entries); }
 function openAttendance(entry = null, defaults = {}) {
   editingId = entry?.id ?? null;

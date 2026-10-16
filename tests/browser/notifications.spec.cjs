@@ -18,19 +18,20 @@ test('notification : fermeture automatique et nouveau délai après une nouvelle
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('presenceCours.v1')).entries.length)).toBe(2);
 });
 
-test('notification : pause au survol et au clavier, annulation disponible', async ({ page }) => {
+test('notification : fermeture même avec survol et focus, annulation avant expiration', async ({ page }) => {
   await encode(page);
-  await page.clock.runFor(2000);
   await page.locator('#notice').hover();
-  await page.clock.runFor(6000);
-  await expect(page.locator('#notice')).toBeVisible();
   await page.locator('#undoBtn').focus();
-  await page.locator('h1').hover();
-  await page.clock.runFor(6000);
-  await expect(page.locator('#notice')).toBeVisible();
-  await page.locator('#undoBtn').press('Enter');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('presenceCours.v1')).entries.length)).toBe(0);
-  await page.locator('#themeBtn').focus();
   await page.clock.runFor(5001);
+  await expect(page.locator('#notice')).toBeHidden();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('presenceCours.v1')).entries.length)).toBe(1);
+  await encode(page);
+  await page.clock.runFor(3000);
+  await page.locator('#undoBtn').click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('presenceCours.v1')).entries.length)).toBe(1);
+  await expect(page.locator('#noticeText')).toHaveText('Modification annulée.');
+  await page.clock.runFor(2500);
+  await expect(page.locator('#notice')).toBeVisible();
+  await page.clock.runFor(2501);
   await expect(page.locator('#notice')).toBeHidden();
 });
